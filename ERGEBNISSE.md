@@ -1,132 +1,231 @@
-# Evaluationsergebnisse: regelbasierte Planung vs. MILP-Optimierung
+# Evaluation: regelbasierte Planung vs. MILP-Optimierung
 
-**Instanz:** Normalstation Innere Medizin / Kardiologie, 30 Betten, 22 Mitarbeitende,
-28 Planungstage (30.11.–27.12.2026), Datensatz-Version 2.0.0, Seed 20261130
-**Stand:** erste vollständige Messung nach Fertigstellung beider Verfahren
-**Reproduktion:** `python test_planner.py` — beide Verfahren, alle drei Szenarien
+**Versuchsaufbau:** 15 Instanzen (5 Seeds × 3 Personaldecken) × 3 Ausfallszenarien ×
+4 Verfahrensvarianten = **180 Pläne**
+**Station:** Innere Medizin / Kardiologie, 30 Betten, 28 Planungstage, 28 Tage Historie
+**Reproduktion:** `python campaign.py` (13–18 Min.), Auswertung `python campaign.py --report`
+**Rohdaten:** `evaluation_results.csv` (180 Zeilen, eine je Plan)
 
-Alle Zahlen unten sind **gemessene Ergebnisse des Prototyps**, keine Schätzungen und
-keine Literaturwerte. Was daraus für den Business Impact folgt und was nicht, steht in
-Abschnitt 5.
+Alle Zahlen sind **gemessene Ergebnisse des Prototyps**. Was daraus für den Business Impact
+folgt und was nicht, steht in Abschnitt 6.
 
 ---
 
-## 1. Die beiden Verfahren
+## 1. Warum eine Kampagne und nicht eine Instanz
 
-| | Regelbasiert (Baseline) | MILP-Optimierung |
+Die erste Messung lief auf genau einem Datensatz und ergab einen Gleichstand: beide
+Verfahren erreichten 100 % Besetzungsquote ohne Regelverstöße. Daraus lässt sich nichts
+schließen — weder dass die Optimierung nichts bringt, noch dass sie etwas bringt. Eine
+einzelne Instanz kann zu leicht sein.
+
+Die Kampagne variiert deshalb zwei Größen unabhängig voneinander:
+
+| Faktor | Werte | Wirkung |
 |---|---|---|
-| Vorgehen | Tag für Tag, Schicht für Schicht; jeweils die am wenigsten ausgelastete regelkonforme Person | gesamte Periode als ein gemischt-ganzzahliges Programm |
-| Blickweite | eine Schicht | 28 Tage gleichzeitig |
-| Löser | — (Heuristik) | HiGHS über `scipy.optimize.milp` |
-| Modellgröße | — | 2.338 Variablen, 4.066 Nebenbedingungen |
-| Entspricht | manueller Excel-Planung | dem „KI-gestützten" Ansatz der Leitfrage |
+| **Seed** | 5 verschiedene | andere Belegung, andere Belegschaft, andere Ausfälle |
+| **Personaldecke** (`staffing_factor`) | 1,00 / 0,90 / 0,80 | Belegschaft relativ zum rechnerischen Bruttobedarf (Ø 22 / 20 / 18 Köpfe) |
 
-Beide arbeiten auf **identischen Daten, Regeln und Szenarien** — Voraussetzung für einen
-fairen Vergleich (Projektvorgabe 3). Beide werden von derselben, verfahrensunabhängigen
-Funktion `evaluate()` bewertet.
+Die Personaldecke ist die wichtigere Stellschraube: Sie steuert, ob die Aufgabe überhaupt
+lösbar ist. 1,00 entspricht bedarfsgerechter Besetzung nach der Bruttobedarfsrechnung
+(siehe `DATENKONZEPT.md`, Abschnitt 3.5); 0,80 bildet eine Station ab, die zwanzig Prozent
+unter ihrem rechnerischen Bedarf arbeitet — in der Pflege keine exotische Annahme.
 
-### Zur Methodenwahl
+Verglichen werden vier Varianten: beide Verfahren jeweils als vollständige Neuplanung und
+als reaktive Umplanung (bestehender Plan als Ausgangspunkt).
+
+---
+
+## 2. Ergebnisse nach Personaldecke
+
+Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweichung.
+
+### Bedarfsgerechte Besetzung (100 %, Ø 22 Köpfe)
+
+| Kennzahl | Greedy | Greedy reaktiv | MILP | MILP reaktiv |
+|---|---|---|---|---|
+| Besetzungsquote | 100,0 % | 100,0 % | 100,0 % | 100,0 % |
+| Untergrenzenverstöße | 0,00 | 0,00 | 0,00 | 0,00 |
+| harte Regelverstöße | 0,00 | 0,00 | 0,00 | 0,00 |
+| weiche Abweichungen | 16,8 ± 0,9 | 16,4 ± 1,2 | **0,0 ± 0,0** | 1,0 ± 0,8 |
+| Streuung Auslastung | 0,065 ± 0,017 | 0,076 ± 0,026 | **0,015 ± 0,004** | 0,039 ± 0,021 |
+| Planstabilität | 63,2 % | 92,2 % | 48,7 % | **94,9 %** |
+| Planungszeit | 0,44 s | 0,37 s | 7,58 s | 0,27 s |
+
+### Knappe Besetzung (90 %, Ø 20 Köpfe)
+
+| Kennzahl | Greedy | Greedy reaktiv | MILP | MILP reaktiv |
+|---|---|---|---|---|
+| Besetzungsquote | 99,6 % | 99,4 % | **100,0 %** | **100,0 %** |
+| Untergrenzenverstöße | 0,53 ± 0,74 | 0,80 ± 0,86 | **0,00** | **0,00** |
+| harte Regelverstöße | 0,20 ± 0,41 | 0,53 ± 0,74 | **0,00** | **0,00** |
+| weiche Abweichungen | 15,1 ± 1,8 | 15,3 ± 2,0 | **0,7 ± 1,0** | 1,9 ± 1,9 |
+| Streuung Auslastung | 0,060 ± 0,037 | 0,066 ± 0,032 | **0,016 ± 0,003** | 0,041 ± 0,022 |
+| Planstabilität | 67,7 % | 91,9 % | 49,2 % | **94,4 %** |
+| Planungszeit | 0,40 s | 0,33 s | 14,14 s | 0,27 s |
+
+### Unterbesetzt (80 %, Ø 18 Köpfe)
+
+| Kennzahl | Greedy | Greedy reaktiv | MILP | MILP reaktiv |
+|---|---|---|---|---|
+| Besetzungsquote | 95,2 % | 95,5 % | **99,9 %** | **99,9 %** |
+| Untergrenzenverstöße | 4,53 ± 1,96 | 4,27 ± 2,19 | **0,00** | **0,00** |
+| harte Regelverstöße | 1,27 ± 1,10 | 1,40 ± 1,18 | **0,07 ± 0,26** | 0,07 ± 0,26 |
+| weiche Abweichungen | 14,1 ± 2,5 | 14,6 ± 2,1 | **3,3 ± 1,0** | 4,6 ± 1,5 |
+| Streuung Auslastung | 0,073 ± 0,023 | 0,083 ± 0,025 | **0,062 ± 0,036** | 0,077 ± 0,036 |
+| Planstabilität | 70,9 % | 91,3 % | 53,6 % | **93,2 %** |
+| Planungszeit | 0,35 s | 0,30 s | 14,95 ± 10,11 s | 0,56 s |
+
+### Anteil vollständig regelkonformer Pläne
+
+(keine harten Regelverstöße **und** keine Untergrenzenverstöße)
+
+| Verfahren | 80 % | 90 % | 100 % |
+|---|---|---|---|
+| Greedy | **0 %** | 60 % | 100 % |
+| Greedy reaktiv | **0 %** | 40 % | 100 % |
+| MILP | **93 %** | 100 % | 100 % |
+| MILP reaktiv | **93 %** | 100 % | 100 % |
+
+---
+
+## 3. Was die Kampagne beantwortet
+
+**Der Gleichstand aus der Einzelmessung war instanzabhängig.** Bei bedarfsgerechter
+Besetzung erreichen beide Verfahren die Sollbesetzung ohne Regelverstöße — die erste
+Messung war also nicht falsch, aber nicht verallgemeinerbar. Sobald die Personaldecke
+sinkt, trennen sich die Verfahren deutlich.
+
+**Unter Knappheit sichert nur die Optimierung die gesetzliche Untergrenze.** Bei 80 %
+Personaldecke unterschreitet die Heuristik die Pflegepersonaluntergrenze im Mittel 4,5-mal
+je Plan und lässt insgesamt 106 Dienste unbesetzt; die Optimierung kommt auf null
+Untergrenzenverstöße und 2 unbesetzte Dienste über alle 15 Pläne hinweg. **Kein einziger
+Greedy-Plan bei 80 % war vollständig regelkonform, 93 % der MILP-Pläne waren es.** Das ist
+das betriebswirtschaftlich relevanteste Ergebnis: Der Mehrwert der Optimierung entsteht
+nicht im Normalbetrieb, sondern genau dort, wo es eng wird.
+
+**Die Verteilungswirkung ist durchgängig und robust.** Die Streuung der individuellen
+Auslastung sinkt bei bedarfsgerechter Besetzung von 0,065 auf 0,015 — ein Faktor von rund
+vier, bei kleiner Standardabweichung über die Seeds. Die durchschnittlich 16,8
+Überschreitungen der Wochenend- und Nachtdienst-Richtwerte der Heuristik gehen auf 0
+zurück. Beides bei identischer Besetzungsquote: Die Heuristik entscheidet lokal optimal
+und erzeugt dadurch systematisch Ungleichverteilung.
+
+**Die reaktive Umplanung ist der größte Einzeleffekt.** Eine vollständige Neuplanung nach
+Ausfällen erhält nur rund die Hälfte des Plans (MILP 48,7–53,6 %, Greedy 63,2–70,9 %). Die
+reaktive Variante hält 93–95 % und rechnet in 0,37 s im Median (Maximum 2,45 s), bei
+unveränderter Besetzungsquote und ohne zusätzliche Regelverstöße. Für die Mitarbeitenden
+ist das der Unterschied zwischen „einige Dienste ändern sich" und „der Monat wird neu
+gemacht".
+
+**Der Preis der Stabilität ist messbar.** Die reaktive Variante erkauft sich die
+Planstabilität mit schlechterer Lastverteilung (Streuung 0,039 statt 0,015 bei 100 %
+Decke) und einzelnen weichen Abweichungen. Das ist kein Mangel, sondern der Zielkonflikt
+selbst — der Prototyp macht ihn quantifizierbar, statt ihn zu verstecken.
+
+**Rechenzeit ist kein limitierender Faktor.** Die Optimierung braucht 7,6 s bei
+bedarfsgerechter und knapp 15 s bei knapper Besetzung; in 13 % der Läufe griff das
+Zeitlimit von 30 s, ohne dass die Ergebnisqualität erkennbar litt. Die Umplanung liegt
+unter einer Sekunde. Beides ist für eine Stationsleitung unproblematisch.
+
+---
+
+## 4. Was die Kampagne **nicht** beantwortet
+
+**Ein einziger MILP-Plan verletzt eine harte Regel** (Seed 31415, 80 % Decke, Szenario S2:
+ein Qualifikationsverstoß, 2 offene Dienste). Das ist kein Modellfehler: Unter extremer
+Knappheit plus Ausfallwelle ist die Instanz nicht vollständig lösbar, und das Modell
+verletzt bewusst die am geringsten gewichtete Vorgabe, statt gar keinen Plan zu liefern.
+Genau dieses Verhalten ist beabsichtigt — es gibt aber eine Grenze, jenseits derer auch
+Optimierung nur noch verwaltet, was fehlt.
+
+**Die Heuristik ist keine echte Excel-Planung.** Sie ist eine programmierte Regelheuristik:
+konsistenter, schneller und ermüdungsfrei. Der Unterschied zu manueller Planung dürfte
+größer sein als hier gemessen — belegen lässt sich das mit diesem Aufbau nicht.
+
+**Fünf Seeds sind wenig.** Die Streuungen sind bei den Kernaussagen klein genug, um sie zu
+tragen (Untergrenzenverstöße bei 80 %: Greedy 4,53 ± 1,96 gegen MILP 0,00 ± 0,00), aber
+für inferenzstatistische Aussagen wäre eine größere Stichprobe nötig. Ein Signifikanztest
+wird hier bewusst nicht gerechnet.
+
+**Die Gewichte der Zielfunktion sind gesetzt, nicht hergeleitet.** Wie stark Unterbesetzung
+gegen Lastverteilung gegen Wunscherfüllung zählt, ist eine Managemententscheidung. Andere
+Gewichte liefern andere Pläne. Eine Sensitivitätsanalyse dazu steht aus.
+
+**Alle Daten sind synthetisch.** Die absolute Höhe der Kennzahlen ist nicht auf eine
+konkrete Station übertragbar. Der Vergleich zweier Verfahren auf identischer Datenbasis
+bleibt gültig.
+
+---
+
+## 5. Methodenwahl
 
 Machine Learning wurde geprüft und verworfen: Es gibt keine zu lernende Zielvariable und
 keine historischen Planentscheidungen als Trainingsdaten. Das Problem ist eine Zuordnung
 unter harten Nebenbedingungen mit mehreren konkurrierenden Zielen — dafür sind
 mathematische Optimierung und Constraint Programming die einschlägigen Verfahren
-(Burke et al. 2004; Van den Bergh et al. 2013). Umgesetzt ist ein MILP; ein
-CP-SAT-Modell wäre eine gleichwertige Alternative.
+(Burke et al. 2004; Van den Bergh et al. 2013). Umgesetzt ist ein MILP mit 2.338 Variablen
+und 4.066 Nebenbedingungen, gelöst mit HiGHS über `scipy.optimize.milp`; ein CP-SAT-Modell
+wäre eine gleichwertige Alternative.
+
+Rechtliche und vertragliche Grenzen sind harte Nebenbedingungen. Unterbesetzung,
+Untergrenzenverstöße, Lastverteilung, Dienstwünsche sowie Wochenend- und
+Nachtdienstverteilung gehen gewichtet in die Zielfunktion ein. Alle Besetzungsziele sind
+weich modelliert, damit das Modell auch bei unlösbarer Instanz einen Plan mit
+ausgewiesenen Lücken liefert statt gar keinen.
+
+**Beide Verfahren werden von derselben, verfahrensunabhängigen Funktion `evaluate()`
+bewertet.** Ein Verfahren darf seine eigene Regelkonformität nicht selbst behaupten.
 
 ---
 
-## 2. Ergebnisse
+## 6. Business Impact
 
-| Szenario | Verfahren | Rechenzeit | Besetzungsquote | offene Dienste | Untergrenzen­verstöße | harte Regel­verstöße | weiche Abweichungen | Streuung Auslastung | Spanne Auslastung | Planstabilität | geänderte Zuweisungen |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| S0 | Regelbasiert | 0,5 s | 100,0 % | 0 | 0 | 0 | 17 | 0,040 | 18,9 % | Referenz | – |
-| S0 | MILP | 6,2 s | 100,0 % | 0 | 0 | 0 | **0** | **0,017** | **9,1 %** | Referenz | – |
-| S1 | Regelbasiert | 0,5 s | 100,0 % | 0 | 0 | 0 | 17 | 0,039 | 18,9 % | 38,9 % | 223 |
-| S1 | MILP (Neuplanung) | 3,6 s | 100,0 % | 0 | 0 | 0 | 0 | 0,017 | 9,1 % | 29,3 % | 266 |
-| S1 | MILP (reaktiv) | 0,2 s | 100,0 % | 0 | 0 | 0 | 2 | 0,074 | 30,4 % | **93,3 %** | **20** |
-| S2 | Regelbasiert | 0,5 s | 100,0 % | 0 | 0 | 0 | 16 | 0,055 | 25,3 % | 32,9 % | 251 |
-| S2 | MILP (Neuplanung) | 7,4 s | 100,0 % | 0 | 0 | 0 | 0 | 0,020 | 9,1 % | 21,7 % | 307 |
-| S2 | MILP (reaktiv) | 0,3 s | 100,0 % | 0 | 0 | 0 | 2 | 0,038 | 15,8 % | **94,0 %** | **18** |
+**Gemessen** (gilt für diese 15 Instanzen):
 
-Kennzahlen: *Streuung* = Standardabweichung der individuellen Auslastung (Ist-Stunden zur
-verfügbaren Sollzeit), *Spanne* = Abstand zwischen der am geringsten und der am stärksten
-ausgelasteten Person, *Planstabilität* = Anteil der (Person, Tag)-Zuweisungen, die
-gegenüber dem Referenzplan unverändert bleiben.
+- Bei knapper Personaldecke sichert die Optimierung die gesetzliche Mindestbesetzung, die
+  Heuristik nicht: 0 gegen 4,5 Untergrenzenverstöße je Plan bei 80 % Decke; 93 % gegen 0 %
+  vollständig regelkonforme Pläne.
+- Gleichmäßigere Belastung bei identischer Besetzung: Streuung der Auslastung um Faktor 4
+  geringer, alle Wochenend- und Nachtdienst-Richtwerte eingehalten.
+- Reaktion auf Ausfälle: 93–95 % Planstabilität statt 49–71 %, Umplanung unter einer
+  Sekunde.
 
----
-
-## 3. Was die Zahlen zeigen
-
-**Der Unterschied liegt nicht in der Besetzung.** Beide Verfahren erreichen in allen
-Szenarien 100 % Besetzungsquote, null Untergrenzenverstöße und null harte
-Regelverstöße. Das war nicht selbstverständlich, ist aber erklärbar: Der Datensatz ist
-so dimensioniert, dass der Bedarf rund 90 % der verfügbaren Kapazität bindet — knapp,
-aber lösbar. **Für die Hausarbeit ist das ein Ergebnis, kein Fehlschlag:** Wenn die
-Besetzung ohnehin gelingt, ist die Frage nach dem Mehrwert einer Optimierung eine Frage
-nach *Planqualität*, nicht nach *Machbarkeit*.
-
-**Der Unterschied liegt in der Verteilung.** Die Streuung der Auslastung sinkt von 0,040
-auf 0,017, die Spanne zwischen der am wenigsten und der am stärksten belasteten Person
-von 18,9 auf 9,1 Prozentpunkte. Die 17 Überschreitungen des Wochenend-Richtwerts der
-Baseline verschwinden vollständig. Die Heuristik entscheidet lokal optimal und
-produziert dadurch systematisch Ungleichverteilung; das Modell sieht alle 28 Tage und
-kann eine heute ungünstige Zuweisung in Kauf nehmen.
-
-**Der größte Effekt betrifft die Umplanung.** Eine vollständige Neuplanung nach Ausfällen
-zerstört den Plan: 223 bis 307 geänderte Zuweisungen, Planstabilität zwischen 22 und
-39 %. Für die Mitarbeitenden bedeutet das einen komplett neuen Dienstplan wegen einiger
-weniger Ausfälle. Die reaktive Variante — bestehender Plan als Ausgangspunkt, Änderungen
-werden bestraft — kommt mit **18 bis 20 Änderungen** aus und hält 93 bis 94 %
-Planstabilität, bei unveränderter Besetzungsquote und in **0,2 Sekunden**.
-
-**Der Preis dafür ist sichtbar.** Der reaktive Plan hat eine schlechtere Lastverteilung
-(Streuung 0,074 bzw. 0,038 statt 0,017) und zwei weiche Abweichungen. Das ist kein
-Mangel, sondern der Zielkonflikt selbst: Stabilität gegen Gleichverteilung. Der
-Prototyp macht ihn messbar, statt ihn zu verstecken.
-
-**Rechenzeit.** 3,6 bis 7,4 Sekunden für einen kompletten 28-Tage-Plan, 0,2 bis 0,3
-Sekunden für eine Umplanung. Beides ist für den Einsatzzweck unkritisch.
-
----
-
-## 4. Grenzen dieser Messung
-
-1. **Eine Instanz, ein Seed.** Alle Zahlen stammen aus genau einem Datensatz. Für
-   belastbare Aussagen müssten mehrere Instanzen mit unterschiedlichen Seeds gerechnet
-   und die KPIs gemittelt werden. Der Generator ist dafür vorbereitet.
-2. **Die Gewichte der Zielfunktion sind gesetzt, nicht hergeleitet.** Wie stark
-   Unterbesetzung gegen Lastverteilung gegen Wunscherfüllung zählt, ist eine
-   Managemententscheidung. Andere Gewichte liefern andere Pläne.
-3. **Der Solver stoppt bei 1 % Optimalitätslücke.** Die Lösungen sind nachweislich
-   nahezu optimal, aber nicht garantiert optimal, und bei mehrfachem Lauf kann eine
-   andere gleichwertige Lösung herauskommen.
-4. **Die Baseline ist eine programmierte Heuristik, kein echter Mensch mit Excel.** Sie
-   ist konsistenter und schneller als manuelle Planung. Die gemessene Zeitersparnis
-   unterschätzt daher den realen Unterschied vermutlich deutlich — belegen lässt sich
-   das mit diesem Aufbau aber nicht.
-5. **Kein Vergleich mit einem realen Dienstplan.** Der Datensatz ist synthetisch; die
-   absolute Höhe der Kennzahlen ist nicht auf eine konkrete Station übertragbar. Der
-   *Vergleich zweier Verfahren auf identischer Datenbasis* bleibt gültig.
-
----
-
-## 5. Business Impact: gemessen und geschätzt
-
-**Gemessen** (gilt für diese Instanz): gleichmäßigere Lastverteilung bei gleicher
-Besetzung; vollständige Einhaltung der Wochenend-Richtwerte; 18–20 statt 223–307
-Planänderungen nach Ausfällen; Umplanung in unter einer Sekunde.
-
-**Nicht gemessen, nur plausibel** (und in der Hausarbeit als Schätzung zu kennzeichnen):
+**Nicht gemessen, nur plausibel** — in der Hausarbeit als Schätzung zu kennzeichnen:
 Reduktion des manuellen Planungsaufwands, Wirkung gleichmäßigerer Belastung auf
-Zufriedenheit und Fluktuation, wirtschaftliche Effekte durch weniger Überstunden.
-Solche Aussagen erfordern eine Erhebung im Betrieb, keine Simulation.
+Zufriedenheit und Fluktuation, wirtschaftliche Effekte durch weniger Überstunden oder
+vermiedene Bettensperrungen. Solche Aussagen erfordern eine Erhebung im Betrieb.
 
-Ein Punkt verdient betriebswirtschaftlich besondere Aufmerksamkeit: Planstabilität ist
-kein Selbstzweck. Jede kurzfristige Planänderung bedeutet für die betroffene Person eine
-Umstellung privater Planung. Ein Verfahren, das bei gleicher Versorgungsqualität mit
-einem Zehntel der Änderungen auskommt, wirkt genau dort, wo in der Pflege die Belastung
-entsteht — und das ist über die reine Besetzungsquote nicht sichtbar.
+Zwei Punkte verdienen betriebswirtschaftlich besondere Aufmerksamkeit:
+
+**Untergrenzenverstöße sind kein Qualitätsdetail, sondern ein Rechtsrisiko.** Krankenhäuser
+weisen die Einhaltung der Pflegepersonaluntergrenzen quartalsweise gegenüber dem InEK nach.
+Ein Planungsverfahren, das bei knapper Besetzung systematisch darunter gerät, erzeugt einen
+Nachweis- und Sanktionsdruck, der mit der Alternative — Betten sperren — teuer wird.
+
+**Planstabilität wirkt dort, wo die Belastung entsteht.** Jede kurzfristige Änderung
+bedeutet für die betroffene Person eine Umstellung privater Planung. Ein Verfahren, das bei
+gleicher Versorgungsqualität mit einem Bruchteil der Änderungen auskommt, adressiert genau
+den Punkt, den die reine Besetzungsquote nicht sichtbar macht.
+
+---
+
+## 7. Einordnung in die Leitfrage
+
+„Wie kann eine KI-gestützte Planungsempfehlung die Erstellung und kurzfristige Anpassung
+eines Schichtplans gegenüber einer regelbasierten Excel-Planung unterstützen?"
+
+Nach dieser Kampagne lässt sich die Antwort präzisieren:
+
+1. **Bei der Erstellung** liegt der Mehrwert nicht in der Machbarkeit, sondern in
+   Regelkonformität unter Knappheit und in der Verteilungsgerechtigkeit. Ist genug Personal
+   da, tut es auch eine Regelheuristik.
+2. **Bei der kurzfristigen Anpassung** liegt der Mehrwert in der Planstabilität — und zwar
+   nur, wenn Stabilität ausdrücklich als Ziel modelliert wird. Eine bloße Neuoptimierung
+   nach dem Ausfall ist für die Mitarbeitenden schlechter als die Heuristik.
+
+Punkt 2 ist der eigentliche methodische Befund der Arbeit: Nicht „Optimierung schlägt
+Heuristik", sondern „Optimierung schlägt Heuristik dann, wenn die richtigen Ziele im Modell
+stehen".
 
 ---
 
@@ -135,6 +234,6 @@ entsteht — und das ist über die reine Besetzungsquote nicht sichtbar.
 - Burke, E. K., De Causmaecker, P., Vanden Berghe, G., & Van Landeghem, H. (2004). The State of the Art of Nurse Rostering. *Journal of Scheduling*, 7(6), 441–499.
 - Van den Bergh, J., Beliën, J., De Bruecker, P., Demeulemeester, E., & De Boeck, L. (2013). Personnel scheduling: A literature review. *European Journal of Operational Research*, 226(3), 367–385.
 - Wickert, T. I., Smet, P., & Vanden Berghe, G. The nurse rerostering problem: Strategies for reconstructing disrupted schedules. *Computers & Operations Research*.
-- HiGHS-Solver über `scipy.optimize.milp` — <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html>
+- HiGHS über `scipy.optimize.milp` — <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html>
 
-Rechtsgrundlagen und Datenherkunft: siehe `DATENKONZEPT.md`.
+Rechtsgrundlagen, Datenherkunft und Annahmenregister: siehe `DATENKONZEPT.md`.

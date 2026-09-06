@@ -105,8 +105,15 @@ stab = P.stability(ref, repl)
 print(f"        Einzelausfall {victim} am {vday:%d.%m.}: "
       f"{stab['geaenderte_zuweisungen']} Aenderungen")
 check(repl.assignments.get(victim_key) is None, "die ausgefallene Person wird nicht verplant")
-check(stab["geaenderte_zuweisungen"] <= 3,
-      f"gezielte Nachbesetzung aendert wenige Zuweisungen ({stab['geaenderte_zuweisungen']})")
+# Der Greedy uebernimmt fixierte Zuweisungen nur, wenn sie im aktuellen
+# Zustand regelkonform bleiben; er gibt also lieber Dienste frei als die
+# Ruhezeit zu verletzen. Dadurch entsteht etwas mehr Bewegung als beim
+# blossen Festhalten - die Groessenordnung muss aber weit unter einer
+# vollstaendigen Neuplanung (rund 220 Aenderungen) bleiben.
+check(stab["geaenderte_zuweisungen"] <= 20,
+      f"gezielte Nachbesetzung bleibt lokal ({stab['geaenderte_zuweisungen']} Aenderungen)")
+check(P.evaluate(ctx, repl)["harte_verstoesse"] == 0,
+      "reaktive Greedy-Umplanung ohne harte Regelverstoesse")
 
 print("\nExport")
 out = P.export_frame(ctx, ref)

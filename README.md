@@ -12,6 +12,9 @@ streamlit_app.py            Oberfläche
 test_planner.py             Smoke- und Regeltests für die Planungslogik
 generate_dataset.py         Generator für den Datensatz (Seed 20261130)
 validate_dataset.py         Prüfskript für den Datensatz
+campaign.py                 Evaluationskampagne über mehrere Instanzen
+evaluation_results.csv      Rohergebnisse der Kampagne (180 Pläne)
+ERGEBNISSE.md               Evaluation: Aufbau, Ergebnisse, Limitationen
 DATENKONZEPT.md             Begründung jeder Spalte und jedes Parameters mit Quellen
 ```
 
@@ -70,8 +73,10 @@ Van den Bergh et al. 2013).
 ## Tests
 
 ```bash
-python test_planner.py      # Planungslogik gegen den Datensatz
-python validate_dataset.py  # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
+python test_planner.py       # Planungslogik gegen den Datensatz
+python validate_dataset.py   # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
+python campaign.py           # Evaluationskampagne, 15 Instanzen (~15 Min.)
+python campaign.py --report  # aggregierte Auswertung der Kampagne
 ```
 
 Beide Skripte laufen ohne Streamlit und geben Exit-Code 0 zurück, wenn alle harten

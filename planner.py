@@ -278,9 +278,14 @@ def plan_greedy(ctx: Context, scenario: str,
             weekends[e].add(d.isocalendar()[1])
 
     for d in ctx.plan_dates:
-        # bereits fixierte Zuweisungen zuerst uebernehmen
+        # Fixierte Zuweisungen zuerst uebernehmen - aber nur, wenn sie im
+        # aktuellen Zustand regelkonform sind. Ungeprueftes Uebernehmen war ein
+        # Fehler: faellt jemand aus und wird die Luecke neu besetzt, kann die
+        # Ersatzzuweisung mit einer fixierten Zuweisung am Folgetag die
+        # Ruhezeit verletzen. Nicht uebernehmbare Dienste werden freigegeben
+        # und weiter unten regulaer neu besetzt.
         for (e, dd), s in fixed.items():
-            if dd == d and (e, d) not in blocked and (e, d) not in assignments:
+            if dd == d and (e, d) not in assignments and eligible(e, d, s):
                 assign(e, d, s)
 
         for s in ["N", "F", "S"]:                 # Nachtdienst ist am staerksten

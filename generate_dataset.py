@@ -342,9 +342,16 @@ def ausfallquote() -> float:
     return (URLAUBSTAGE + au_arbeitstage + FORTBILDUNGSTAGE) / JAHRESARBEITSTAGE
 
 
-def build_staff(demand_rows):
+def build_staff(demand_rows, staffing_factor: float = 1.0):
+    """
+    `staffing_factor` skaliert die Personaldecke gegenueber dem rechnerischen
+    Bruttobedarf. 1,00 = bedarfsgerecht besetzt, 0,90 = zehn Prozent unter
+    Bedarf. Damit laesst sich die Knappheit der Instanz gezielt variieren -
+    ohne diese Stellschraube waere jede Instanz gleich leicht loesbar und der
+    Vergleich zweier Planungsverfahren waenig aussagekraeftig.
+    """
     netto = required_fte(demand_rows)
-    brutto = netto / (1 - ausfallquote())
+    brutto = netto / (1 - ausfallquote()) * staffing_factor
 
     staff: list[Employee] = []
     # 1 Stationsleitung, 50 % Leitungsfreistellung -> 0,5 VK in der Besetzung
@@ -717,7 +724,8 @@ CONST_RULES = {
 
 
 def build_combined(calendar, shift_types, st_rows, staff, occupancy, demand,
-                   availability, requests, history, absence_events, hist_off):
+                   availability, requests, history, absence_events, hist_off,
+                   seed: int = SEED):
     occ = {r["date"]: r for r in occupancy}
     dem = {(r["date"], r["shift_id"]): r for r in demand}
     stm = {r["employee_id"]: r for r in st_rows}
@@ -836,7 +844,7 @@ def build_combined(calendar, shift_types, st_rows, staff, occupancy, demand,
             row.update(shift_const)
             row.update(CONST_RULES)
             row["dataset_version"] = DATASET_VERSION
-            row["seed"] = SEED
+            row["seed"] = seed
             rows.append(row)
 
     rows.sort(key=lambda r: (r["date"], r["employee_id"]))
@@ -856,6 +864,44 @@ def write_csv(name, rows, fieldnames=None):
         w.writeheader()
         w.writerows(rows)
     return path, len(rows)
+
+
+def build_dataset(seed: int = SEED, staffing_factor: float = 1.0):
+    """Erzeugt eine vollstaendige Instanz im Speicher (fuer Evaluationslaeufe)."""
+    global rng
+    rng = np.random.default_rng(seed)
+    calendar = build_calendar()
+    shift_types = build_shift_types()
+    occupancy = build_occupancy()
+    demand = build_demand(occupancy)
+    staff, netto, brutto = build_staff(demand, staffing_factor)
+    history, accounts, hist_off = build_history(staff, demand)
+    availability = build_availability(staff)
+    unavailable = {(r["employee_id"], r["date"]) for r in availability}
+    requests = build_requests(staff, unavailable)
+    _, absence_events = build_scenarios(staff, demand, unavailable)
+    st_rows = staff_rows(staff, accounts)
+    combined = build_combined(calendar, shift_types, st_rows, staff, occupancy,
+                              demand, availability, requests, history,
+                              absence_events, hist_off, seed=seed)
+    meta = {"seed": seed, "staffing_factor": staffing_factor,
+            "headcount": len(staff),
+            "fte": round(sum(e.employment_pct for e in staff), 2),
+            "fte_netto_bedarf": round(netto, 2),
+            "fte_brutto_ziel": round(brutto, 2),
+            "soll_dienste": sum(r["required_staff"] for r in demand
+                                if r["period"] == "plan")}
+    return combined, meta
+
+
+def write_instance(path: str, seed: int = SEED, staffing_factor: float = 1.0):
+    """Schreibt eine Instanz als CSV und gibt die Metadaten zurueck."""
+    combined, meta = build_dataset(seed, staffing_factor)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(combined[0].keys()))
+        w.writeheader()
+        w.writerows(combined)
+    return meta
 
 
 def main(write_normalized: bool = False):
