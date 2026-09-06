@@ -1,135 +1,36 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+CarePlan - Prototyp zur KI-gestuetzten Personal- und Schichtplanung in der Pflege.
+
+Diese Datei ist reine Oberflaeche. Die gesamte Planungs- und Bewertungslogik
+liegt in planner.py und ist dort ohne laufende App testbar (test_planner.py).
+
+Datengrundlage ist schichtplan_datensatz.csv: Stammdaten, Belegung, Bedarf,
+Historie, Wuensche, Ausfallszenarien und das Regelwerk. Im Code stehen keine
+Grenzwerte - Ruhezeit, Hoechstarbeitszeit, Verhaeltniszahlen und
+Qualifikationsvorgaben kommen aus dem Datensatz.
+
+Es werden keine personenbezogenen und keine Gesundheitsdaten verarbeitet:
+Mitarbeitende sind pseudonyme IDs, Ausfaelle reine Verfuegbarkeitsereignisse.
+"""
+
 from __future__ import annotations
 
-import csv
 import io
-from datetime import date, datetime, time, timedelta
+import os
+from datetime import date
 
+import pandas as pd
 import streamlit as st
 
+import planner as P
+
+DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "schichtplan_datensatz.csv")
+REFERENCE_SCENARIO = "S0 - keine kurzfristigen Ausfaelle"
 
 st.set_page_config(page_title="CarePlan | Schichtplanung", page_icon="+", layout="wide")
-
-EMPLOYEES = [
-    ("MA001", "Jürgen Braun", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA002", "Claudia Wolf", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA003", "Sven Koch", "Pflegefachkraft", "Teilzeit 75%", 28.88, True),
-    ("MA004", "Birgit Carse", "Pflegehilfskraft", "Vollzeit", 38.5, False),
-    ("MA005", "Thomas Hartmann", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA006", "Sophie Wagner", "Pflegehilfskraft", "Vollzeit", 38.5, False),
-    ("MA007", "Cristina Meyer", "Stationsleitung", "Vollzeit", 38.5, False),
-    ("MA008", "Nina Richter", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA009", "Matthias Bauer", "Pflegefachkraft", "Teilzeit 50%", 19.25, True),
-    ("MA010", "Christian Schröder", "Pflegefachkraft", "Teilzeit 80%", 30.8, True),
-    ("MA011", "Christian Hoffmann", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA012", "Matthias Werner", "Pflegehilfskraft", "Teilzeit 80%", 30.8, True),
-    ("MA013", "Kevin Huber", "Pflegefachkraft", "Teilzeit 50%", 19.25, True),
-    ("MA014", "Kevin Hoffmann", "Pflegehilfskraft", "Teilzeit 50%", 19.25, False),
-    ("MA015", "Martina Neumann", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA016", "Melanie Meier", "Pflegehilfskraft", "Teilzeit 60%", 23.1, False),
-    ("MA017", "Tobias Schmidt", "Pflegefachkraft", "Teilzeit 50%", 19.25, True),
-    ("MA018", "Sarah Klein", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA019", "David Zimmermann", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA020", "Katharina Schneider", "Pflegefachkraft", "Teilzeit 50%", 19.25, True),
-    ("MA021", "Stefan Schwarz", "Pflegefachkraft", "Teilzeit 60%", 23.1, True),
-    ("MA022", "Christina Lehmann", "Pflegehilfskraft", "Teilzeit 60%", 23.1, False),
-    ("MA023", "Kevin Weber", "Pflegehilfskraft", "Teilzeit 50%", 19.25, False),
-    ("MA024", "Claudia Schmitt", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA025", "Sophie Becker", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA026", "Jasmin Schulz", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA027", "Thomas Lange", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA028", "Katharina Müller", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA029", "Lukas Fischer", "Auszubildender", "Vollzeit (Ausbildung)", 38.5, False),
-    ("MA030", "Christina Krüger", "Pflegehilfskraft", "Teilzeit 50%", 19.25, True),
-    ("MA031", "Peter Braun", "Pflegehilfskraft", "Vollzeit", 38.5, True),
-    ("MA032", "Andreas Wolf", "Pflegefachkraft", "Vollzeit", 38.5, False),
-    ("MA033", "Lena Koch", "Pflegefachkraft", "Teilzeit 80%", 30.8, True),
-    ("MA034", "Katharina Krause", "Stationsleitung", "Teilzeit 50%", 19.25, True),
-    ("MA035", "Jasmin Hartmann", "Pflegefachkraft", "Teilzeit 80%", 30.8, False),
-    ("MA036", "Christina Wagner", "Pflegehilfskraft", "Teilzeit 60%", 23.1, True),
-    ("MA037", "Anna Meyer", "Pflegefachkraft", "Vollzeit", 38.5, True),
-    ("MA038", "Jasmin Richter", "Pflegefachkraft", "Teilzeit 75%", 28.88, True),
-    ("MA039", "Julia Bauer", "Pflegefachkraft", "Teilzeit 80%", 30.8, True),
-    ("MA040", "Nadine Schröder", "Stationsleitung", "Teilzeit 80%", 30.8, False),
-]
-STAFF = [dict(zip(("id", "name", "qualification", "employment", "hours", "night"), row)) for row in EMPLOYEES]
-SHIFTS = {
-    "Frühdienst": (time(6), time(14), 8),
-    "Spätdienst": (time(14), time(22), 8),
-    "Nachtdienst": (time(22), time(6), 8),
-}
-
-
-def shift_window(day: date, shift: str) -> tuple[datetime, datetime]:
-    start, end, _ = SHIFTS[shift]
-    start_dt = datetime.combine(day, start)
-    end_day = day + timedelta(days=1) if end <= start else day
-    return start_dt, datetime.combine(end_day, end)
-
-
-def absent_ids(scenario: str) -> set[str]:
-    return {"MA002", "MA018"} if scenario == "Zwei kurzfristige Ausfälle" else ({"MA002", "MA018", "MA025", "MA029", "MA040"} if scenario == "Ausfallwelle" else set())
-
-
-def is_within_absence_lock(employee_id: str, start_dt: datetime, manual_absences: set[tuple[str, str, str]]) -> bool:
-    for absent_employee_id, absent_date, absent_shift in manual_absences:
-        if absent_employee_id != employee_id:
-            continue
-        absent_start, _ = shift_window(date.fromisoformat(absent_date), absent_shift)
-        if absent_start <= start_dt < absent_start + timedelta(hours=24):
-            return True
-    return False
-
-
-def build_plan(start_day: date, scenario: str, required: dict[str, int], manual_absences: set[tuple[str, str, str]] | None = None) -> tuple[list[dict], list[str]]:
-    absent = absent_ids(scenario)
-    manual_absences = manual_absences or set()
-    assignments: list[dict] = []
-    last_end: dict[str, datetime] = {}
-    worked: dict[str, float] = {person["id"]: 0 for person in STAFF}
-    warnings: list[str] = []
-
-    for offset in range(7):
-        day = start_day + timedelta(days=offset)
-        for shift in SHIFTS:
-            start_dt, end_dt = shift_window(day, shift)
-            needed = required[shift]
-            for slot in range(needed):
-                candidates = []
-                for person in STAFF:
-                    unavailable = person["id"] in absent or is_within_absence_lock(person["id"], start_dt, manual_absences)
-                    already_assigned = person["id"] in {row["employee_id"] for row in assignments if row["date"] == day.isoformat() and row["shift"] == shift}
-                    if unavailable or already_assigned:
-                        continue
-                    if shift == "Nachtdienst" and not person["night"]:
-                        continue
-                    rest_ok = person["id"] not in last_end or start_dt - last_end[person["id"]] >= timedelta(hours=11)
-                    if not rest_ok:
-                        continue
-                    qualification_score = 0 if person["qualification"] in {"Pflegefachkraft", "Stationsleitung"} else 1
-                    candidates.append((qualification_score, worked[person["id"]], person["hours"], person))
-                if not candidates:
-                    warnings.append(f"{day:%d.%m.}: {shift} Slot {slot + 1} konnte nicht regelkonform besetzt werden.")
-                    continue
-                _, _, _, person = sorted(candidates, key=lambda candidate: candidate[:3])[0]
-                assignments.append({"date": day.isoformat(), "day": day.strftime("%a %d.%m."), "shift": shift, "employee_id": person["id"], "name": person["name"], "qualification": person["qualification"], "slot": slot + 1})
-                worked[person["id"]] += 8
-                last_end[person["id"]] = end_dt
-
-    if absent:
-        warnings.insert(0, f"Szenario aktiv: {len(absent)} Mitarbeitende sind kurzfristig abwesend. Es wurden keine Gesundheitsdaten verarbeitet.")
-    if manual_absences:
-        warnings.insert(0, f"Manuelle Anpassung: {len(manual_absences)} schichtbezogene Ausfalltage wurden berücksichtigt.")
-    return assignments, warnings
-
-
-def as_csv(rows: list[dict]) -> str:
-    output = io.StringIO()
-    fields = ["date", "day", "shift", "slot", "employee_id", "name", "qualification"]
-    writer = csv.DictWriter(output, fieldnames=fields)
-    writer.writeheader()
-    writer.writerows(rows)
-    return output.getvalue()
-
 
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -140,100 +41,307 @@ h1, h2, h3 { font-family:'Space Grotesk', sans-serif; letter-spacing:0; }
 .eyebrow { color:var(--teal); text-transform:uppercase; font-size:.72rem; font-weight:700; letter-spacing:.12em; }
 .hero h1 { font-size:2.25rem; margin:.25rem 0 .3rem; }
 .hero p { color:var(--muted); margin:0; font-size:1rem; }
-.metric { background:#f3f8f6; border-left:4px solid var(--teal); padding:.8rem 1rem; min-height:90px; }
+.metric { background:#f3f8f6; border-left:4px solid var(--teal); padding:.8rem 1rem; min-height:96px; }
 .metric strong { display:block; font-family:'Space Grotesk'; font-size:1.75rem; }
 .metric span { color:var(--muted); font-size:.8rem; }
+.metric.warn { background:#fff5ed; border-left-color:var(--coral); }
 .notice { background:#fff5ed; border-left:4px solid var(--coral); padding:.7rem .9rem; margin:.35rem 0; color:#713b2b; }
+.source { color:var(--muted); font-size:.78rem; }
 </style>""", unsafe_allow_html=True)
 
-st.markdown('<div class="hero"><div class="eyebrow">CarePlan / Prototyp 01</div><h1>Schichtplanung, die mitdenkt.</h1><p>Regelkonforme Planung für Früh-, Spät- und Nachtdienste mit schneller Ausfallanpassung.</p></div>', unsafe_allow_html=True)
+st.markdown('<div class="hero"><div class="eyebrow">CarePlan / Prototyp 02</div>'
+            '<h1>Schichtplanung, die mitdenkt.</h1>'
+            '<p>28-Tage-Planung auf Basis von Belegung, Qualifikation und Arbeitszeitrecht '
+            '&ndash; mit messbarer Reaktion auf kurzfristige Ausf&auml;lle.</p></div>',
+            unsafe_allow_html=True)
+
+
+# --------------------------------------------------------------------------
+# Daten laden
+# --------------------------------------------------------------------------
+
+@st.cache_data(show_spinner=False)
+def load_bytes(payload: bytes) -> pd.DataFrame:
+    return P.load_dataset(io.BytesIO(payload))
+
 
 with st.sidebar:
-    st.markdown("### Plan konfigurieren")
-    start_day = st.date_input("Planwoche ab", date.today() - timedelta(days=date.today().weekday()))
-    scenario = st.selectbox("Ausfallszenario", ["Keine Ausfälle", "Zwei kurzfristige Ausfälle", "Ausfallwelle"], help="Nur anonymisierte Ausfall-Slots, keine Diagnosen oder Gesundheitsdaten.")
-    st.markdown("**Mindestbesetzung je Schicht**")
-    required = {shift: st.number_input(shift, min_value=1, max_value=6, value=3 if shift != "Nachtdienst" else 2, key=shift) for shift in SHIFTS}
-    generate = st.button("Plan neu berechnen", type="primary", use_container_width=True)
+    st.markdown("### Datengrundlage")
+    upload = st.file_uploader(
+        "Eigenen Datensatz verwenden (CSV)", type="csv",
+        help="Optional. Ohne Upload wird schichtplan_datensatz.csv aus dem "
+             "Repository geladen - so ist jeder Lauf reproduzierbar.")
 
-if "manual_absences" not in st.session_state:
-    st.session_state.manual_absences = set()
-if generate or st.session_state.get("rebuild", False) or "plan" not in st.session_state:
-    st.session_state.plan, st.session_state.warnings = build_plan(start_day, scenario, required, st.session_state.manual_absences)
-    st.session_state.plan_meta = (start_day, scenario)
-    st.session_state.rebuild = False
-
-plan = st.session_state.plan
-warnings = st.session_state.warnings
-absent = absent_ids(scenario)
-filled = len(plan)
-expected = sum(required.values()) * 7
-coverage = round(filled / expected * 100) if expected else 0
-qualified_nights = sum(row["shift"] == "Nachtdienst" and row["qualification"] in {"Pflegefachkraft", "Stationsleitung"} for row in plan)
-
-with st.sidebar.expander("Person manuell als Ausfall markieren", expanded=True):
-    st.caption("Wähle eine bereits eingeplante Person. Die Abwesenheit gilt für diesen Dienst und bis zu 5 Folgetage.")
-    absence_day = st.selectbox("Tag", [start_day + timedelta(days=offset) for offset in range(7)], format_func=lambda selected: selected.strftime("%A, %d.%m."))
-    absence_shift = st.selectbox("Schicht", list(SHIFTS), key="absence_shift")
-    scheduled = [row for row in plan if row["date"] == absence_day.isoformat() and row["shift"] == absence_shift]
-    scheduled_people = {row["employee_id"]: row["name"] for row in scheduled}
-    if scheduled_people:
-        selected_id = st.selectbox("Eingeplante Person", list(scheduled_people), format_func=lambda employee_id: f"{scheduled_people[employee_id]} ({employee_id})")
-        max_duration = min(5, 7 - (absence_day - start_day).days)
-        duration = st.slider("Dauer in Tagen", 1, max_duration, 1)
-        if st.button("Ausfall anwenden", use_container_width=True):
-            for offset in range(duration):
-                affected_day = absence_day + timedelta(days=offset)
-                st.session_state.manual_absences.add((selected_id, affected_day.isoformat(), absence_shift))
-            st.session_state.rebuild = True
-            st.rerun()
+try:
+    if upload is not None:
+        df = load_bytes(upload.getvalue())
+        source_label = f"Upload: {upload.name}"
+    elif os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "rb") as fh:
+            df = load_bytes(fh.read())
+        source_label = os.path.basename(DATA_FILE)
     else:
-        st.info("Für diese Schicht ist aktuell niemand eingetragen.")
-    if st.session_state.manual_absences:
-        st.caption(f"Aktive manuelle Ausfalltage: {len(st.session_state.manual_absences)}")
-        if st.button("Letzte manuelle Anpassung entfernen", use_container_width=True):
-            st.session_state.manual_absences.pop()
-            st.session_state.rebuild = True
-            st.rerun()
+        st.error("schichtplan_datensatz.csv wurde nicht gefunden. "
+                 "Datei ins Repository legen oder oben hochladen.")
+        st.stop()
+    ctx = P.build_context(df)
+except P.DatasetError as exc:
+    st.error(str(exc))
+    st.stop()
+except Exception as exc:                                   # noqa: BLE001
+    st.error(f"Der Datensatz konnte nicht gelesen werden: {exc}")
+    st.stop()
 
-metric_cols = st.columns(4)
-for column, value, label in zip(metric_cols, [f"{coverage}%", filled, len(STAFF) - len(absent), len(warnings)], ["Besetzungsgrad", "Dienste geplant", "Verfügbar", "Prüfhinweise"]):
-    column.markdown(f'<div class="metric"><strong>{value}</strong><span>{label}</span></div>', unsafe_allow_html=True)
 
-st.write("")
-if warnings:
-    with st.expander(f"Prüfhinweise ({len(warnings)})", expanded=True):
-        for warning in warnings:
-            st.markdown(f'<div class="notice">{warning}</div>', unsafe_allow_html=True)
-else:
-    st.success("Alle angeforderten Dienste konnten unter den hinterlegten Regeln besetzt werden.")
+# --------------------------------------------------------------------------
+# Steuerung
+# --------------------------------------------------------------------------
 
-tab_plan, tab_staff, tab_rules = st.tabs(["Wochenplan", "Mitarbeitende", "Regeln & Annahmen"])
-with tab_plan:
-    left, right = st.columns([4, 1])
-    with left:
-        view = st.selectbox("Ansicht", ["Alle Schichten", "Nur Nachtdienste", "Nur offene Slots"], label_visibility="collapsed")
-    with right:
-        st.download_button("CSV exportieren", as_csv(plan), "schichtplan.csv", "text/csv", use_container_width=True)
-    shown = plan if view == "Alle Schichten" else ([row for row in plan if row["shift"] == "Nachtdienst"] if view == "Nur Nachtdienste" else [])
-    if view == "Nur offene Slots":
-        st.info("Offene Slots werden in den Prüfhinweisen ausgewiesen.")
+if "manual" not in st.session_state:
+    st.session_state.manual = set()
+
+with st.sidebar:
+    st.caption(f"Quelle: {source_label} &middot; Version "
+               f"{ctx.ward.get('dataset_version', '?')} &middot; Seed "
+               f"{ctx.ward.get('seed', '?')}", unsafe_allow_html=True)
+
+    st.markdown("### Planung")
+    scenario = st.selectbox(
+        "Ausfallszenario", list(P.SCENARIOS),
+        help="Anonymisierte Verfuegbarkeitsereignisse aus dem Datensatz. "
+             "Es werden keine Gesundheitsdaten verarbeitet.")
+    reactive = st.toggle(
+        "Reaktiv umplanen", value=True,
+        help="An: der Referenzplan wird festgehalten, nur betroffene Dienste "
+             "werden neu besetzt (Planstabilitaet). Aus: der Plan wird "
+             "vollstaendig neu gerechnet.")
+
+    st.markdown("### Zusaetzlicher Ausfall")
+    emp = st.selectbox("Mitarbeitende", list(ctx.staff.index),
+                       format_func=lambda e: f"{e} ({ctx.staff.loc[e, 'role']})")
+    day = st.selectbox("Tag", ctx.plan_dates, format_func=lambda d: d.strftime("%a, %d.%m.%Y"))
+    duration = st.slider("Dauer in Tagen", 1, 7, 1)
+    c1, c2 = st.columns(2)
+    if c1.button("Ausfall melden", use_container_width=True):
+        for offset in range(duration):
+            idx = ctx.plan_dates.index(day) + offset
+            if idx < len(ctx.plan_dates):
+                st.session_state.manual.add((emp, ctx.plan_dates[idx].isoformat()))
+        st.rerun()
+    if c2.button("Zuruecksetzen", use_container_width=True):
+        st.session_state.manual = set()
+        st.rerun()
+    if st.session_state.manual:
+        st.caption(f"{len(st.session_state.manual)} manuelle Ausfalltage aktiv")
+
+manual = {(e, date.fromisoformat(d)) for e, d in st.session_state.manual}
+
+# Referenzplan ohne kurzfristige Ausfaelle - Bezugspunkt fuer die Stabilitaet
+reference = P.plan_greedy(ctx, REFERENCE_SCENARIO)
+fixed = reference.assignments if reactive else None
+current = P.plan_greedy(ctx, scenario, manual_absences=manual, fixed=fixed)
+
+kpi = P.evaluate(ctx, current)
+kpi_ref = P.evaluate(ctx, reference)
+stab = P.stability(reference, current)
+is_reference = (scenario == REFERENCE_SCENARIO and not manual)
+
+
+# --------------------------------------------------------------------------
+# Kennzahlen
+# --------------------------------------------------------------------------
+
+def metric(col, value, label, warn=False):
+    col.markdown(f'<div class="metric{" warn" if warn else ""}"><strong>{value}</strong>'
+                 f'<span>{label}</span></div>', unsafe_allow_html=True)
+
+
+cols = st.columns(6)
+metric(cols[0], f"{kpi['besetzungsquote']:.0%}", "Besetzungsquote")
+metric(cols[1], kpi["offene_slots"], "offene Dienste", warn=kpi["offene_slots"] > 0)
+metric(cols[2], kpi["untergrenzen_verstoesse"], "Untergrenze (PpUGV)",
+       warn=kpi["untergrenzen_verstoesse"] > 0)
+metric(cols[3], kpi["harte_verstoesse"], "harte Regelverstoesse",
+       warn=kpi["harte_verstoesse"] > 0)
+metric(cols[4], f"{kpi['arbeitszeitabweichung']:.0%}", "Arbeitszeitabweichung")
+metric(cols[5], "Referenz" if is_reference else f"{stab['planstabilitaet']:.0%}",
+       "Planstabilitaet", warn=not is_reference and stab["planstabilitaet"] < 0.8)
+
+st.caption(f"Verfahren: {current.method} &middot; Planungszeit "
+           f"{kpi['planungszeit_s']:.2f} s &middot; {len(ctx.plan_dates)} Tage &middot; "
+           f"{kpi['soll_dienste']} Soll-Dienste &middot; "
+           f"{'reaktive Umplanung' if reactive else 'vollstaendige Neuplanung'}",
+           unsafe_allow_html=True)
+
+if not is_reference:
+    st.info(f"Gegenueber dem Referenzplan wurden **{stab['geaenderte_zuweisungen']} "
+            f"Zuweisungen** geaendert. Je niedriger dieser Wert bei gleicher "
+            f"Besetzungsquote, desto stabiler der Plan fuer die Mitarbeitenden.")
+
+tabs = st.tabs(["Dienstplan", "Bedarf & Besetzung", "Pruefhinweise",
+                "Arbeitszeit", "Mitarbeitende", "Daten & Regeln"])
+
+
+# --------------------------------------------------------------------------
+with tabs[0]:
+    left, right = st.columns([3, 1])
+    left.markdown("**Dienstplan** &nbsp; F = Fruehdienst, S = Spaetdienst, "
+                  "N = Nachtdienst, &ndash; = geplante Abwesenheit",
+                  unsafe_allow_html=True)
+    export = P.export_frame(ctx, current)
+    right.download_button("Plan als CSV", export.to_csv(index=False).encode("utf-8"),
+                          "schichtplan_ergebnis.csv", "text/csv",
+                          use_container_width=True)
+
+    matrix = current.matrix(ctx)
+    colors = {"F": "#dff4ed", "S": "#fdf3e3", "N": "#e6e9f5", "–": "#f2f2f2"}
+    try:
+        styled = matrix.style.map(lambda v: f"background-color: {colors.get(v, '')}")
+        st.dataframe(styled, use_container_width=True, height=760)
+    except Exception:                                       # noqa: BLE001
+        st.dataframe(matrix, use_container_width=True, height=760)
+    st.caption("Der Export enthaelt den vollstaendigen Eingabedatensatz plus die "
+               "Spalte assigned_shift - ein Artefakt fuer die spaetere Auswertung.")
+
+
+# --------------------------------------------------------------------------
+with tabs[1]:
+    rows = []
+    for d in ctx.plan_dates:
+        day = ctx.days.loc[d]
+        for s in P.SHIFT_IDS:
+            crew = [e for (e, dd), sh in current.assignments.items() if dd == d and sh == s]
+            countable = [e for e in crew
+                         if int(ctx.staff.loc[e, "ppug_countable"]) == 1]
+            fach = [e for e in countable
+                    if ctx.staff.loc[e, "ppug_category"] == "Pflegefachkraft"]
+            rows.append({
+                "Datum": d.strftime("%a %d.%m."),
+                "Schicht": s,
+                "Patienten": int(day["census_1200" if s != "N" else "census_0000"]),
+                "Untergrenze": int(day[f"ppug_min_{s}"]),
+                "Soll": int(day[f"required_{s}"]),
+                "Besetzt": len(countable),
+                "davon Fachkraft": len(fach),
+                "Azubis": len(crew) - len(countable),
+                "Delta": len(countable) - int(day[f"required_{s}"]),
+            })
+    cover = pd.DataFrame(rows)
+    st.dataframe(cover, use_container_width=True, hide_index=True, height=520)
+    st.markdown("**Besetzung je Tag** (Summe ueber alle drei Schichten)")
+    per_day = cover.groupby("Datum", sort=False)[["Soll", "Besetzt"]].sum()
+    st.line_chart(per_day)
+    st.caption("Untergrenze nach PpUGV § 6 (Tag 10:1, Nacht 22:1); Soll aus dem "
+               "Pflegeaufwand nach PPR-2.0-Logik. Die Untergrenze ist eine harte "
+               "Restriktion, das Soll eine Qualitaetskennzahl.")
+
+
+# --------------------------------------------------------------------------
+with tabs[2]:
+    viol = kpi["verstoesse"]
+    if not viol:
+        st.success("Alle Dienste konnten unter den hinterlegten Regeln besetzt werden.")
     else:
-        st.dataframe(shown, column_config={"date": None, "employee_id": "ID", "day": "Tag", "shift": "Dienst", "slot": "Slot", "name": "Name", "qualification": "Qualifikation"}, hide_index=True, use_container_width=True)
-    st.caption(f"Nachtdienste mit Pflegefachkraft/Stationsleitung: {qualified_nights} von {required['Nachtdienst'] * 7} angeforderten Slots.")
+        hard = [v for v in viol if "weich" not in v["art"]]
+        soft = [v for v in viol if "weich" in v["art"]]
+        st.markdown(f"**{len(hard)} harte Befunde**")
+        for v in hard[:60]:
+            st.markdown(f'<div class="notice"><strong>{v["art"]}</strong> &middot; '
+                        f'{v["hinweis"]}</div>', unsafe_allow_html=True)
+        if len(hard) > 60:
+            st.caption(f"... und {len(hard) - 60} weitere")
+        if soft:
+            with st.expander(f"{len(soft)} weiche Abweichungen "
+                             "(Wochenend- und Nachtdienstverteilung)"):
+                for v in soft:
+                    st.write(f"{v['art']}: {v['hinweis']}")
+    if current.open_slots:
+        st.markdown("**Nicht besetzbare Dienste**")
+        st.dataframe(pd.DataFrame(current.open_slots), use_container_width=True,
+                     hide_index=True)
 
-with tab_staff:
-    available = [person for person in STAFF if person["id"] not in absent]
-    st.dataframe(available, column_config={"id": "ID", "name": "Name", "qualification": "Qualifikation", "employment": "Beschäftigungsumfang", "hours": st.column_config.NumberColumn("Wochenstunden", format="%.2f"), "night": "Nachtdienst geeignet"}, hide_index=True, use_container_width=True)
-    if absent:
-        st.caption("Abwesend in diesem Szenario: " + ", ".join(sorted(absent)))
 
-with tab_rules:
-    st.markdown("""#### Verbindliche Prüfregeln
-- **Ruhezeit:** Zwischen zwei Diensten liegen mindestens 11 Stunden.
-- **Qualifikation:** Nachtwachen werden nur Pflegefachkräften oder Stationsleitungen zugewiesen.
-- **Arbeitszeit:** Jeder Dienst umfasst 8 Stunden; die Wochenstunden aus den Stammdaten dienen als Kapazitätspriorität.
-- **Mindestbesetzung:** Früh-, Spät- und Nachtdienst werden pro Tag separat geprüft.
-- **Ausfälle:** Szenarien sind anonymisierte Verfügbarkeitsänderungen. Es werden keine individuellen Gesundheitsdaten gespeichert oder verarbeitet.
+# --------------------------------------------------------------------------
+with tabs[3]:
+    hours = pd.DataFrame(kpi["arbeitszeit_detail"])
+    if not hours.empty:
+        hours = hours.join(ctx.staff[["role", "employment_pct"]], on="employee_id")
+        hours["Ist (h)"] = (hours["ist_min"] / 60).round(1)
+        hours["Soll (h)"] = (hours["soll_min"] / 60).round(1)
+        hours["Abweichung (h)"] = (hours["abweichung_min"] / 60).round(1)
+        show = hours[["employee_id", "role", "employment_pct", "Ist (h)",
+                      "Soll (h)", "Abweichung (h)", "abweichung_pct"]]
+        show = show.rename(columns={"employee_id": "ID", "role": "Rolle",
+                                    "employment_pct": "Umfang",
+                                    "abweichung_pct": "Abweichung (%)"})
+        st.dataframe(show.sort_values("Abweichung (%)"), use_container_width=True,
+                     hide_index=True)
+        st.bar_chart(hours.set_index("employee_id")["abweichung_pct"])
+    st.caption("Soll = Vertragskapazitaet im Horizont, anteilig um geplante "
+               "Abwesenheiten gekuerzt. Auszubildende sind nicht enthalten, da sie "
+               "nach PpUGV § 2 nicht auf die Besetzung angerechnet werden.")
+    st.markdown(f"Pflegehilfskraft-Anteil an den Diensten: "
+                f"**{kpi['hilfskraftanteil']:.1%}** "
+                f"(Grenze nach PpUGV: {kpi['hilfskraft_grenze']:.0%})")
 
-Die Empfehlung verteilt zuerst qualifizierte Personen und priorisiert danach die geringste bisher geplante Arbeitszeit. Das ist eine transparente Heuristik für den Prototyp und ersetzt keine arbeitsrechtliche oder pflegefachliche Freigabe.""")
+
+# --------------------------------------------------------------------------
+with tabs[4]:
+    people = ctx.staff[["role", "role_group", "skills", "employment_pct",
+                        "weekly_hours", "night_eligible", "ppug_category",
+                        "max_night_shifts", "time_account_start_min"]].copy()
+    people["Dienste im Plan"] = [
+        sum(1 for (e, _), _s in current.assignments.items() if e == idx)
+        for idx in people.index]
+    absent_now = {e for (e, _) in (ctx.unavailable | P.scenario_absences(ctx, scenario)
+                                   | manual)}
+    people["Abwesenheit im Horizont"] = [
+        sum(1 for d in ctx.plan_dates
+            if (idx, d) in (ctx.unavailable | P.scenario_absences(ctx, scenario) | manual))
+        for idx in people.index]
+    st.dataframe(people, use_container_width=True, height=560)
+    st.caption(f"{len(ctx.staff)} pseudonyme Mitarbeitende, davon "
+               f"{len(absent_now)} mit Abwesenheitstagen im Szenario. "
+               "Keine Klarnamen, keine Ausfallgruende, keine Gesundheitsdaten.")
+
+
+# --------------------------------------------------------------------------
+with tabs[5]:
+    st.markdown("#### Station")
+    st.table(pd.DataFrame([ctx.ward]).T.rename(columns={0: "Wert"}))
+
+    st.markdown("#### Schichtarten")
+    st.table(pd.DataFrame([
+        {"Schicht": s,
+         "Beginn": ctx.shifts[s]["start"].strftime("%H:%M"),
+         "Ende": ctx.shifts[s]["end"].strftime("%H:%M"),
+         "Nettominuten": ctx.shifts[s]["net"],
+         "unzulaessige Folgeschicht": ", ".join(ctx.shifts[s]["forbidden_next"]) or "-"}
+        for s in P.SHIFT_IDS]))
+
+    st.markdown("#### Regelwerk aus dem Datensatz")
+    st.table(pd.DataFrame([{"Parameter": k, "Wert": v} for k, v in ctx.rules.items()]))
+
+    st.markdown("""
+#### Rechtsgrundlagen
+
+- **Ruhezeit:** mindestens 11 Stunden zwischen zwei Diensten (§ 5 Abs. 1 ArbZG).
+  Daraus folgen die gesperrten Schichtfolgen Spaet&rarr;Frueh und Nacht&rarr;Frueh/Spaet.
+- **Arbeitszeit:** werktaeglich 8 Stunden, auf 10 nur mit Ausgleich (§ 3 ArbZG);
+  Pausen 30 bzw. 45 Minuten (§ 4 ArbZG); Nachtarbeit § 6 ArbZG.
+- **Mindestbesetzung:** Verhaeltniszahlen und maximaler Pflegehilfskraftanteil
+  nach § 6 PpUGV in Verbindung mit der Anlage.
+- **Qualifikation:** Pflegekraft = Pflegefachkraft oder Pflegehilfskraft (§ 2 PpUGV).
+  Auszubildende werden eingeplant, aber nicht auf die Untergrenze angerechnet.
+- **Vertragsrahmen:** 38,5 Wochenstunden (§ 6 TVoeD-K), 30 Urlaubstage (§ 26 TVoeD-K).
+
+#### Methodischer Hinweis
+
+Der hier eingesetzte Planer ist eine **transparente Greedy-Heuristik** und dient als
+regelbasierte Referenz (Baseline). Er ist ausdruecklich kein KI-Verfahren. Der
+Vergleich mit einem optimierungsbasierten Ansatz ist der naechste Schritt; die
+Schnittstelle in `planner.py` ist dafuer vorbereitet.
+
+Die Bewertung in `evaluate()` prueft den fertigen Plan unabhaengig vom Planer nach.
+Ein Verfahren darf seine eigene Regelkonformitaet nicht selbst behaupten.
+""", unsafe_allow_html=True)
