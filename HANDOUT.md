@@ -15,7 +15,7 @@ werden.
 kurzfristige Anpassung eines Schichtplans gegenüber einer regelbasierten Excel-Planung
 unterstützen?
 
-**Prototyp:** Normalstation Innere Medizin/Kardiologie, 30 Betten, 22 Mitarbeitende,
+**Prototyp:** Normalstation Innere Medizin/Kardiologie, 30 Betten, 23 Mitarbeitende,
 28 Tage Planungshorizont. Zwei Verfahren auf identischer Datengrundlage: eine
 regelbasierte Heuristik (Baseline) und eine mathematische Optimierung.
 
@@ -40,12 +40,12 @@ Quellen abgeleitet (PpUGV, ArbZG, TVöD-K, Destatis, PPR 2.0) und über einen fe
 exakt reproduzierbar.
 
 Evaluiert wurde über **15 Instanzen** (5 Zufallsseeds × 3 Personaldecken) × 3
-Ausfallszenarien × 4 Verfahrensvarianten = **180 Pläne**. Die beiden Ausfallszenarien
-tragen dasselbe Ausfallvolumen und unterscheiden sich nur in der Struktur — verteilte
-Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der Struktur
-zuzurechnen ist und nicht dem Umfang.
+Ausfallszenarien × 4 Verfahrensvarianten = **180 Pläne**. Die beiden Ausfallszenarien sind
+auf dasselbe Ausfallvolumen kalibriert und unterscheiden sich nur in der Struktur —
+verteilte Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der
+Struktur zuzurechnen ist und nicht dem Umfang.
 
-## Die sechs wichtigsten Learnings
+## Die sieben wichtigsten Learnings
 
 **1. Machine Learning war nicht die Antwort — und das war das erste Ergebnis.**
 Es gibt keine zu lernende Zielvariable und keine historischen Planentscheidungen als
@@ -62,7 +62,7 @@ optimierten Pläne. Wer nur eine bequeme Instanz rechnet, misst nichts.
 
 **3. Die Zielfunktion entscheidet, nicht das Verfahren.**
 Nach einem Ausfall neu zu optimieren lieferte *schlechtere* Planstabilität als die
-simple Heuristik (50 % gegen 74 % unveränderte Dienste). Erst als „möglichst wenig
+simple Heuristik (50 % gegen 77 % unveränderte Dienste). Erst als „möglichst wenig
 ändern" ausdrücklich ins Modell kam, stieg die Stabilität auf 95 %. Optimierung ist nur
 so gut wie die Ziele, die man ihr vorgibt.
 
@@ -76,12 +76,18 @@ Eine eigene Funktion bewertet den fertigen Plan unabhängig davon, wer ihn erzeu
 Ohne diese Trennung wäre jeder KPI-Vergleich zirkulär gewesen — und sie hat uns
 tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
-**6. Gleich viele Ausfälle wirken sehr unterschiedlich.**
-Zwei Szenarien mit identischem Ausfallvolumen, aber unterschiedlicher Struktur: verteilte
-Einzeltage gegen mehrtägige Episoden in einer Welle. Die Welle kostet mehr — bei der
-Heuristik steigen die harten Regelverstöße von 0,6 auf 1,3 je Plan, bei der Optimierung
-bleiben sie null. Der Wert eines Planungsverfahrens zeigt sich in der Störung, nicht im
-Durchschnittsmonat.
+**6. Der Vorteil der Optimierung verschwindet genau dann, wenn man ihn bräuchte.**
+Ohne Störung verteilt sie die Arbeitslast 2,5-mal gleichmäßiger als die Heuristik. Unter
+einer gebündelten Ausfallwelle ist der Unterschied **null** (Spanne 0,376 gegen 0,380).
+Gleichverteilung setzt Spielraum voraus — fallen mehrere Personen gleichzeitig mehrtägig
+aus, ist keiner mehr da, der übernehmen könnte. Was bleibt, ist die Regelkonformität.
+Optimierung nutzt vorhandenen Spielraum besser aus; sie erzeugt keinen.
+
+**7. Einen Effekt messen heißt, die Alternativerklärung ausschließen.**
+Die Ausfallwelle sah zunächst auch instabiler aus. Als wir nur die Instanzen betrachteten,
+in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der Stabilitätsunterschied von
+2,6 auf 0,8 Prozentpunkte — er war überwiegend ein Mengen-, kein Struktureffekt. Der
+Verteilungseffekt hielt der Prüfung stand (6 von 6 Instanzen). Nur den berichten wir.
 
 ## Herausforderungen
 
@@ -106,14 +112,15 @@ Durchschnittsmonat.
 
 Python mit pandas · **SciPy/HiGHS** für die Optimierung (kein kommerzieller Solver nötig)
 · Streamlit für die Oberfläche · GitHub und Streamlit Community Cloud für Versionierung
-und Betrieb. Rechenzeit: 7–17 Sekunden für einen kompletten 28-Tage-Plan, im Median unter
+und Betrieb. Rechenzeit: 10–16 Sekunden für einen kompletten 28-Tage-Plan, im Median unter
 einer Viertelsekunde für eine Umplanung.
 
 ## Was wir gemessen haben — und was nicht
 
-**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,4
-Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 29 auf 7
-Prozentpunkte), Planstabilität nach Ausfällen (93–95 % statt 49–78 %), Rechenzeit.
+**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,3
+Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast im Normalbetrieb (Spanne
+von 33 auf 7 Prozentpunkte) und ihr Verschwinden unter der Ausfallwelle, Planstabilität
+nach Ausfällen (94–96 % statt 49–79 %), Rechenzeit.
 
 **Nicht gemessen, nur plausibel:** Reduktion des manuellen Planungsaufwands, Wirkung auf
 Zufriedenheit und Fluktuation, vermiedene Bettensperrungen. Diese Aussagen bräuchten eine

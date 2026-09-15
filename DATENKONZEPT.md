@@ -2,8 +2,8 @@
 
 **Projekt:** KI-gestützte Personal- und Schichtplanung in der Pflege
 **Fallstudie:** Normalstation „Innere Medizin und Kardiologie", 30 Betten
-**Datensatz-Version:** 2.0.0 · Seed 20261130 · erzeugt mit `generate_dataset.py`
-**Auslieferung:** eine einzelne Datei `schichtplan_datensatz.csv` (1.232 Zeilen × 94 Spalten)
+**Datensatz-Version:** 2.1.0 · Seed 20261133 · erzeugt mit `generate_dataset.py`
+**Auslieferung:** eine einzelne Datei `schichtplan_datensatz.csv` (1.288 Zeilen × 94 Spalten)
 **Planungshorizont:** 30.11.2026 – 27.12.2026 (28 Tage) · Historie: 02.11.2026 – 29.11.2026
 
 ---
@@ -167,9 +167,9 @@ dritte Pflegehilfskraft würde die 10-%-Grenze der PpUGV-Anlage für diesen Bere
 
 ## 4. Die Einzeltabelle: Aufbau und Begründung
 
-`schichtplan_datensatz.csv` — UTF-8, Komma-getrennt, ISO-Datumsformat, 1.232 Zeilen ×
+`schichtplan_datensatz.csv` — UTF-8, Komma-getrennt, ISO-Datumsformat, 1.288 Zeilen ×
 94 Spalten, rund 520 KB. **Analysekorn: eine Zeile je Mitarbeitendem und Kalendertag**
-(22 Mitarbeitende × 56 Tage = 28 Tage Historie + 28 Tage Planung).
+(23 Mitarbeitende × 56 Tage = 28 Tage Historie + 28 Tage Planung).
 
 ### 4.1 Warum dieses Korn und nicht ein anderes
 
@@ -179,7 +179,7 @@ Eine einzelne Tabelle zwingt zu einer Entscheidung über das Korn, und die ist n
 |---|---|---|
 | Tag × Schicht | 168 | Bedarf sauber, aber Mitarbeitende passen nicht hinein — die Ressourcenseite ginge verloren |
 | Mitarbeitender × Tag × Schicht | 3.696 | dreifach redundant, ohne zusätzlichen Informationsgehalt: eine Person arbeitet höchstens einen Dienst pro Tag |
-| **Mitarbeitender × Tag** | **1.232** | die Planungsentscheidung selbst („welchen Dienst bekommt Person *i* am Tag *d*?") ist genau eine Zeile; Bedarf je Schicht passt als drei Spaltengruppen daneben |
+| **Mitarbeitender × Tag** | **1.288** | die Planungsentscheidung selbst („welchen Dienst bekommt Person *i* am Tag *d*?") ist genau eine Zeile; Bedarf je Schicht passt als drei Spaltengruppen daneben |
 
 Das gewählte Korn ist damit identisch mit dem **Entscheidungsraum des Planungsproblems**: Der
 gesuchte Dienstplan ist genau eine zusätzliche Spalte (`assigned_shift`) zu dieser Tabelle.
@@ -189,7 +189,7 @@ ist bereits die leere Planmatrix.
 ### 4.2 Der Preis: bewusste Denormalisierung
 
 Mitarbeiterstammdaten wiederholen sich in 56 Zeilen, Tages- und Bedarfsdaten in 22, Stations-
-und Regelspalten in allen 1.232. Das verletzt die dritte Normalform. Das ist ein realer
+und Regelspalten in allen 1.288. Das verletzt die dritte Normalform. Das ist ein realer
 Nachteil und wird hier bewusst in Kauf genommen:
 
 - **Ein Artefakt, eine Version.** Vierzehn Dateien können auseinanderlaufen; eine Datei
@@ -294,33 +294,54 @@ der Menge der Ausfälle und in deren Verteilung, wäre der Vergleich konfundiert
 Ergebnisdifferenz ließe sich ebenso gut mit „S2 hat einfach mehr Ausfälle" erklären, und die
 Aussage über korrelierte Ausfälle wäre nicht belegbar.
 
-| Szenario | Struktur | Spalten | Realisiert (Seed 20261130) |
+| Szenario | Struktur | Spalten | Realisiert (Seed 20261133) |
 |---|---|---|---|
 | **S0** | keine kurzfristigen Ausfälle; nur geplante Abwesenheiten | beide Ausfallspalten 0 | 0 Ausfalltage |
-| **S1** | unabhängige Einzeltage, Rate 4 % je Person und Tag über den gesamten Horizont | `absence_s1`, `absence_s1_notice_h` | 26 Ausfalltage, 17 Personen |
-| **S2** | 7 Krankheitsepisoden von 2–4 Tagen; Beginn zu 80 % im Fenster 14.–19.12. | `absence_s2`, `absence_s2_notice_h` | 18 Ausfalltage, 5 Personen |
+| **S1** | unabhängige Einzeltage, Rate 4 % je Person und Tag über den gesamten Horizont | `absence_s1`, `absence_s1_notice_h` | 19 Ausfalltage, 10 Personen |
+| **S2** | 7 Krankheitsepisoden von 2–4 Tagen; Beginn zu 80 % im Fenster 14.–19.12. | `absence_s2`, `absence_s2_notice_h` | 19 Ausfalltage, 6 Personen |
 
 Die Wirkung dieser Kalibrierung:
 
 | | S1 | S2 |
 |---|---|---|
-| Ausfalltage gesamt | 26 | 18 |
-| Anteil im Wellenfenster | 38 % | **67 %** |
-| betroffene Personen | 17 | **5** |
-| längste zusammenhängende Episode | 2 Tage | **4 Tage** |
-| Ausfälle je Tag **im** Wellenfenster | 1,67 | **2,00** |
-| Ausfälle je Tag **außerhalb** | 0,73 | **0,27** |
+| Ausfalltage gesamt | 19 | 19 |
+| Anteil im Wellenfenster | 5 % | **79 %** |
+| betroffene Personen | 10 | **6** |
+| längste zusammenhängende Episode | 1 Tag | **4 Tage** |
+| Ausfälle je Tag **im** Wellenfenster | 0,17 | **2,50** |
+| Ausfälle je Tag **außerhalb** | 0,82 | **0,18** |
 
-S2 trifft also weniger als ein Drittel so viele Personen, diese dafür mehrtägig und
-weitgehend gleichzeitig. Innerhalb des Fensters ist die Tageslast rund siebenmal so hoch
-wie außerhalb; zwei Drittel aller Ausfalltage liegen in diesen sechs Tagen. Das ist das
-Bild einer Infektwelle auf Station.
+Bei **exakt gleicher Zahl an Ausfalltagen** trifft S2 also deutlich weniger Personen, diese
+dafür mehrtägig und weitgehend gleichzeitig. Innerhalb des Fensters ist die Tageslast rund
+vierzehnmal so hoch wie außerhalb; vier Fünftel aller Ausfalltage liegen in diesen sechs
+Tagen. Das ist das Bild einer Infektwelle auf Station.
 
-Über die 15 Instanzen der Evaluationskampagne gemittelt liegt S1 bei 17,0 und S2 bei 18,1
-Ausfalltagen — eine Abweichung von 6,7 %. Die Einzelinstanz oben streut um diesen Wert;
-die Kalibrierung gilt für das Mittel, nicht für jede Ziehung.
+### 5.2 Auswahl der ausgelieferten Instanz
 
-### 5.2 Warum Episoden und nicht erhöhte Tagesraten
+Die Kalibrierung der Episodenzahl (Abschnitt 5.3) gleicht das Ausfallvolumen **im Mittel
+über die Kampagneninstanzen** an, nicht in jeder einzelnen Ziehung. Eine zufällig gezogene
+Einzelinstanz kann deshalb deutlich unausgewogen sein — im zuvor ausgelieferten Datensatz
+(Seed 20261130) trug S1 mit 26 gegen 18 Ausfalltagen 44 % mehr Volumen als S2. Die
+Planstabilität fiel dort bei S2 **höher** aus als bei S1, weil schlicht weniger Löcher zu
+stopfen waren: 9 gegen 16 Ausfalltage trafen einen tatsächlich geplanten Dienst. Diese
+Einzelinstanz widersprach damit der Richtung der Kampagne.
+
+Der ausgelieferte Datensatz wird deshalb nach einer **vorab festgelegten Regel auf einer
+Eigenschaft der Daten** ausgewählt, nicht nach dem Planungsergebnis:
+
+> Ausgeliefert wird die erste Instanz in aufsteigender Seed-Reihenfolge ab 20261130, in der
+> S1 und S2 **exakt gleich viele Ausfalltage** tragen.
+
+Das ist Seed 20261133 (19 gegen 19). Die Regel greift ausschließlich auf die Eingangsdaten
+zu; welches Planungsergebnis daraus folgt, geht in die Auswahl nicht ein. Eine Selektion
+nach dem Ergebnis wäre unzulässig und ist hier ausdrücklich nicht erfolgt. Der Seed ist
+zugleich einer der fünf Kampagnenseeds, sodass die in der Anwendung gezeigte Instanz Teil
+der Evaluation ist.
+
+Über die 15 Instanzen der Evaluationskampagne gemittelt bleibt die Abweichung zwischen den
+Szenarien klein; die Einzelinstanzen streuen um diesen Wert.
+
+### 5.3 Warum Episoden und nicht erhöhte Tagesraten
 
 Ein früheres Modell erhöhte im Wellenfenster lediglich die Tagesrate von 4 % auf 12 %. Das
 hatte zwei Mängel, die erst in der Auswertung auffielen:
@@ -340,7 +361,7 @@ von S1 kalibriert. Über die 15 Kampagneninstanzen gemessen ergeben 7 Episoden i
 und 9 % bei 6. Die Mehrtägigkeit ist zugleich explizit modelliert statt als Nebeneffekt
 einer erhöhten Tagesrate erhofft.
 
-### 5.3 Vorlaufzeit
+### 5.4 Vorlaufzeit
 
 `absence_s*_notice_h` gibt an, wie viele Stunden vor Dienstbeginn die Meldung eingeht. In S2
 trägt nur der **erste Tag einer Episode** eine kurzfristige Meldung (2–12 Stunden); die

@@ -245,7 +245,7 @@ s = pres.addSlide();
 head(s, "Datengrundlage: synthetisch, aber hergeleitet",
   "Keine personenbezogenen Daten, keine Gesundheitsdaten — als Konstruktionsprinzip.");
 bulletRows(s, [
-  { t: "Eine Station, 30 Betten, 22 Mitarbeitende", d: "28 Planungstage plus 28 Tage Historie, 1.232 Zeilen in einer Datei" },
+  { t: "Eine Station, 30 Betten, 23 Mitarbeitende", d: "28 Planungstage plus 28 Tage Historie, 1.288 Zeilen in einer Datei" },
   { t: "Werte aus dokumentierten Quellen", d: "Bettenauslastung 72 % und Verweildauer 7,1 Tage (Destatis), Pflegeaufwand nach PPR 2.0, Teilzeit- und Fachkraftquoten" },
   { t: "Belegschaftsgröße gerechnet, nicht geschätzt", d: "Netto-Bedarf 11,9 Vollkräfte, Ausfallquote 21,9 % → Brutto-Bedarf 15,2 Vollkräfte" },
 ], M, 2.0, 6.9, 1.25);
@@ -301,8 +301,8 @@ chartSlide(s, "Ergebnis 1: Regelkonformität unter Knappheit",
   "Bei bedarfsgerechter Besetzung sind beide gleich gut. Der Unterschied entsteht erst, wenn es eng wird.",
   IMG("01_regelkonformitaet.png"), 1.451, [
     { t: "Bei 80 % Personaldecke", d: "war kein einziger Plan der Baseline vollständig regelkonform — gegenüber 100 % der optimierten Pläne." },
-    { t: "Im Mittel 4,4 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
-    { t: "Besetzungsquote", d: "95,4 % gegenüber 100,0 % — 102 unbesetzte Dienste gegenüber 1." },
+    { t: "Im Mittel 4,3 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
+    { t: "Besetzungsquote", d: "95,4 % gegenüber 100,0 % — 104 unbesetzte Dienste gegenüber keinem." },
   ]);
 s.addNotes("Das ist die Kernfolie. Betonen: Der Mehrwert entsteht nicht im Normalbetrieb, sondern genau dort, wo es eng wird.");
 
@@ -311,7 +311,7 @@ s = pres.addSlide();
 chartSlide(s, "Ergebnis 2: Verteilung der Arbeitslast",
   "Gleiche Besetzungsquote, sehr unterschiedliche Belastung der einzelnen Person.",
   IMG("04_lastverteilung.png"), 1.805, [
-    { t: "Spanne von 29 auf 7 Prozentpunkte", d: "Abstand zwischen der am geringsten und der am stärksten ausgelasteten Person." },
+    { t: "Spanne von 33 auf 7 Prozentpunkte", d: "Abstand zwischen der am geringsten und der am stärksten ausgelasteten Person." },
     { t: "Wochenend-Richtwerte", d: "Die Baseline überschreitet sie im Schnitt 16-mal je Plan, die Optimierung kein einziges Mal." },
     { t: "Warum", d: "Die Heuristik entscheidet lokal optimal und erzeugt dadurch systematisch Ungleichverteilung." },
   ]);
@@ -322,7 +322,7 @@ s = pres.addSlide();
 chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
   "Der wichtigste Befund — und er stellt die Erwartung auf den Kopf.",
   IMG("03_planstabilitaet.png"), 1.721, [
-    { t: "Neu optimieren ist schlechter", d: "als die simple Heuristik: 50 % gegenüber 74 % unveränderte Dienste. Der Monat wird faktisch neu gemacht." },
+    { t: "Neu optimieren ist schlechter", d: "als die simple Heuristik: 50 % gegenüber 77 % unveränderte Dienste. Der Monat wird faktisch neu gemacht." },
     { t: "Mit Stabilität als Ziel", d: "steigt der Wert auf 95 % — bei gleicher Besetzungsquote und in unter einer Sekunde." },
     { t: "Die Lehre", d: "Optimierung ist nur so gut wie die Ziele, die man ihr vorgibt." },
   ]);
@@ -330,14 +330,14 @@ s.addNotes("Betonen: Nicht das Verfahren entscheidet, sondern die Zielfunktion. 
 
 // ---------- 12 Ergebnis Ausfallstruktur -----------------------------------
 s = pres.addSlide();
-chartSlide(s, "Ergebnis 4: Nicht wie viele Ausfälle — wie sie verteilt sind",
-  "Gleiches Ausfallvolumen, andere Struktur: die Welle trennt die Verfahren stärker als die Menge.",
-  IMG("05_ausfallstruktur.png"), 1.878, [
-    { t: "Sauber getrennt", d: "Gleiches Volumen (Ø 17,0 gegen 18,1 Ausfalltage), andere Struktur: S1 verteilt über 11 Personen, S2 gebündelt bei 6." },
-    { t: "Die Welle kostet die Baseline", d: "1,33 statt 0,60 harte Regelverstöße je Plan, 3,9 statt 2,8 offene Dienste. Die Optimierung bleibt bei null." },
-    { t: "Warum", d: "Einzeltage lassen sich über 28 Tage ausgleichen. Fallen mehrere gleichzeitig aus, geht das nicht." },
+chartSlide(s, "Ergebnis 4: Wo die Optimierung an ihre Grenze kommt",
+  "Bei vergleichbarem Ausfallvolumen: Unter der Welle verteilt sie die Last nicht mehr gleichmäßiger als die Heuristik.",
+  IMG("05_ausfallstruktur.png"), 1.795, [
+    { t: "Der Vorsprung verschwindet", d: "Ohne Störung verteilt die Optimierung die Last 2,5-mal gleichmäßiger. Unter der Welle: 38 gegen 38 — kein Unterschied mehr." },
+    { t: "Warum", d: "Gleichverteilung braucht Spielraum. Fallen mehrere Personen gleichzeitig mehrtägig aus, ist keiner mehr da, der übernehmen könnte." },
+    { t: "Was bleibt", d: "Die Regelkonformität: null Verstöße gegen 1,20 bei der Baseline. Optimierung sichert Recht, nicht Gerechtigkeit." },
   ]);
-s.addNotes("Wichtig fuer die Methodenkritik: Wir haben die Szenarien bewusst volumengleich kalibriert. Sonst waere jeder Unterschied auch mit 'S2 hat einfach mehr Ausfaelle' erklaerbar gewesen.");
+s.addNotes("Kritisch einordnen: Wir haben zusaetzlich auf den Instanzen geprueft, in denen S2 NICHT mehr Ausfalltage hat als S1. Der Verteilungseffekt bleibt dort in 6 von 6 Faellen bestehen - er ist strukturell. Der Stabilitaetsunterschied schrumpft dagegen von 2,6 auf 0,8 Prozentpunkte, ist also ueberwiegend ein Volumeneffekt. Das sagen wir ausdruecklich dazu.");
 
 // ---------- 13 Business Impact --------------------------------------------
 s = pres.addSlide();
@@ -349,8 +349,8 @@ s.addText("Gemessen", {
 });
 s.addText([
   { text: "Regelkonformität unter Knappheit: 100 % gegenüber 0 % der Pläne", options: { bullet: true, breakLine: true } },
-  { text: "Ungleichverteilung der Last um Faktor vier reduziert", options: { bullet: true, breakLine: true } },
-  { text: "Planänderungen nach Ausfällen: rund 24 statt 279", options: { bullet: true, breakLine: true } },
+  { text: "Ungleichverteilung der Last um Faktor fünf reduziert — aber nur ohne Ausfallwelle", options: { bullet: true, breakLine: true } },
+  { text: "Planänderungen nach Ausfällen: rund 23 statt 277", options: { bullet: true, breakLine: true } },
   { text: "Umplanung in unter einer Sekunde", options: { bullet: true } },
 ], {
   x: M + 0.35, y: 2.75, w: 5.15, h: 2.9, isTextBox: true, margin: 0,

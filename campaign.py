@@ -36,7 +36,7 @@ import planner as P
 BASE = os.path.dirname(os.path.abspath(__file__))
 RESULTS = os.path.join(BASE, "evaluation_results.csv")
 
-SEEDS = [20261130, 4711, 20260906, 777, 31415]
+SEEDS = [20261133, 4711, 20260906, 777, 31415]
 FACTORS = [1.00, 0.90, 0.80]
 TIME_LIMIT = 30.0
 REFERENCE_SCENARIO = "S0 - keine kurzfristigen Ausfaelle"

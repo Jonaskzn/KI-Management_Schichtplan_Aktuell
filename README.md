@@ -5,12 +5,12 @@ optimierungsbasierten Ansatz. Fallstudie: Normalstation Innere Medizin / Kardiol
 30 Betten, 28 Tage Planungshorizont.
 
 ```
-schichtplan_datensatz.csv   Datengrundlage — eine Datei, 1.232 Zeilen × 94 Spalten
+schichtplan_datensatz.csv   Datengrundlage — eine Datei, 1.288 Zeilen × 94 Spalten
 planner.py                  Planungs- und Bewertungslogik (ohne Streamlit, testbar)
 requirements.txt            Abhängigkeiten für Streamlit Community Cloud
 streamlit_app.py            Oberfläche
 test_planner.py             Smoke- und Regeltests für die Planungslogik
-generate_dataset.py         Generator für den Datensatz (Seed 20261130)
+generate_dataset.py         Generator für den Datensatz (Seed 20261133)
 validate_dataset.py         Prüfskript für den Datensatz
 campaign.py                 Evaluationskampagne über mehrere Instanzen
 evaluation_results.csv      Rohergebnisse der Kampagne (180 Pläne)

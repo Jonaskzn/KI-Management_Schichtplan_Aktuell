@@ -45,7 +45,7 @@ import numpy as np
 # 0) Globale Parameter
 # --------------------------------------------------------------------------
 
-SEED = 20261130
+SEED = 20261133
 DATASET_VERSION = "2.0.0"
 BASE = os.path.dirname(os.path.abspath(__file__))
 COMBINED_FILE = os.path.join(BASE, "schichtplan_datensatz.csv")

@@ -34,7 +34,7 @@ ctx = P.build_context(df)
 print("\nKontext")
 check(len(ctx.plan_dates) == 28, f"28 Planungstage geladen ({len(ctx.plan_dates)})")
 check(len(ctx.hist_dates) == 28, f"28 Historientage geladen ({len(ctx.hist_dates)})")
-check(len(ctx.staff) == 22, f"{len(ctx.staff)} Mitarbeitende")
+check(15 <= len(ctx.staff) <= 30, f"{len(ctx.staff)} Mitarbeitende (plausible Stationsgroesse)")
 check(set(ctx.shifts) == {"F", "S", "N"}, "drei Schichtarten aus dem Datensatz")
 check(ctx.shifts["S"]["forbidden_next"] == ["F"], "Spaet->Frueh ist gesperrt")
 check(sorted(ctx.shifts["N"]["forbidden_next"]) == ["F", "S"], "Nacht->Frueh/Spaet gesperrt")
@@ -122,7 +122,8 @@ check(len(out) == len(df), "Export hat dieselbe Zeilenzahl wie die Eingabe")
 check((out.loc[out["period"] == "history", "assigned_shift"] == "").all(),
       "Historienzeilen bleiben im Export leer")
 mat = ref.matrix(ctx)
-check(mat.shape == (22, 28), f"Planmatrix {mat.shape[0]} x {mat.shape[1]}")
+check(mat.shape == (len(ctx.staff), 28),
+      f"Planmatrix {mat.shape[0]} x {mat.shape[1]} passt zu Belegschaft und Horizont")
 
 
 
