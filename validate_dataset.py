@@ -224,11 +224,52 @@ for s in ["s1", "s2"]:
     n = int(df[f"absence_{s}"].sum())
     print(f"        {s.upper()}: {n:>3d} Ausfallereignisse ({n / pd_days:.1%} der Personentage)")
 n1, n2 = int(df["absence_s1"].sum()), int(df["absence_s2"].sum())
-check(n2 > n1, "Szenario S2 enthaelt mehr Ausfaelle als S1")
-win = df[(df["absence_s2"] == 1) & (df["date_d"] >= date(2026, 12, 14))
-         & (df["date_d"] < date(2026, 12, 20))]
-check(len(win) / max(n2, 1) > 6 / 28,
-      "S2-Ausfaelle sind im Wellenfenster ueberproportional (korreliert)")
+# S1 und S2 sollen sich in der STRUKTUR unterscheiden, nicht im Umfang -
+# sonst liesse sich jede Ergebnisdifferenz auch mit "mehr Ausfaelle" erklaeren.
+check(abs(n2 - n1) / max(n1, 1) <= 0.35,
+      f"S1 und S2 haben vergleichbar viele Ausfalltage ({n1} vs. {n2})")
+
+
+def _fenster(col):
+    w = df[(df[col] == 1) & (df["date_d"] >= date(2026, 12, 14))
+           & (df["date_d"] < date(2026, 12, 20))]
+    return len(w)
+
+
+anteil1 = _fenster("absence_s1") / max(n1, 1)
+anteil2 = _fenster("absence_s2") / max(n2, 1)
+# Entscheidend ist die Verdichtung INNERHALB von S2 (Tagesrate im Fenster
+# gegen Tagesrate ausserhalb). Ein Vergleich gegen S1 waere davon abhaengig,
+# wie S1 zufaellig gezogen hat.
+dichte_innen = _fenster("absence_s2") / 6
+dichte_aussen = (n2 - _fenster("absence_s2")) / 22
+print(f"        Anteil im Wellenfenster:           S1 {anteil1:.0%} / S2 {anteil2:.0%}")
+print(f"        S2 Ausfaelle je Tag:               {dichte_innen:.2f} im Fenster "
+      f"/ {dichte_aussen:.2f} ausserhalb")
+check(dichte_innen >= 3 * max(dichte_aussen, 0.01),
+      "S2 ist im Wellenfenster mindestens dreifach verdichtet")
+check(anteil2 > anteil1, "S2 konzentriert sich staerker im Fenster als S1", hard=False)
+
+
+def _max_episode(col):
+    sub = df[df[col] == 1].sort_values(["employee_id", "date_d"])
+    best = 0
+    for _, grp in sub.groupby("employee_id"):
+        ds, run = list(grp["date_d"]), 1
+        for a, b in zip(ds, ds[1:]):
+            run = run + 1 if (b - a).days == 1 else 1
+            best = max(best, run)
+        best = max(best, 1)
+    return best
+
+
+e1, e2 = _max_episode("absence_s1"), _max_episode("absence_s2")
+n_p1 = df.loc[df["absence_s1"] == 1, "employee_id"].nunique()
+n_p2 = df.loc[df["absence_s2"] == 1, "employee_id"].nunique()
+print(f"        laengste Episode:                  S1 {e1} Tage / S2 {e2} Tage")
+print(f"        betroffene Personen:               S1 {n_p1} / S2 {n_p2}")
+check(e2 > e1, "S2 enthaelt mehrtaegige Krankheitsepisoden")
+check(n_p2 < n_p1, "S2 trifft weniger Personen, diese dafuer laenger")
 check(df.loc[df["absence_s1"] == 1, "absence_s1_notice_h"].notna().all()
       and df.loc[df["absence_s2"] == 1, "absence_s2_notice_h"].notna().all(),
       "jedes Ausfallereignis hat eine Vorlaufzeit")

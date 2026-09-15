@@ -287,22 +287,67 @@ Grund, Kategorie oder Diagnose. Die Szenarien liegen als eigene Spaltenpaare neb
 sodass beide Planungsansätze auf **derselben Datei** über das Szenario schalten können, statt
 verschiedene Dateien zu laden.
 
-| Szenario | Beschreibung | Spalten | Realisiert |
+### 5.1 Der entscheidende Konstruktionsgrundsatz: gleicher Umfang, andere Struktur
+
+S1 und S2 sind bewusst auf **denselben Umfang kalibriert**. Unterschieden sie sich zugleich in
+der Menge der Ausfälle und in deren Verteilung, wäre der Vergleich konfundiert: Jede
+Ergebnisdifferenz ließe sich ebenso gut mit „S2 hat einfach mehr Ausfälle" erklären, und die
+Aussage über korrelierte Ausfälle wäre nicht belegbar.
+
+| Szenario | Struktur | Spalten | Realisiert (Seed 20261130) |
 |---|---|---|---|
-| **S0** | Referenz ohne kurzfristige Ausfälle; nur geplante Abwesenheiten | keine (beide Ausfallspalten 0) | 0 Ereignisse |
-| **S1** | Regelbetrieb: unabhängig über den Horizont verteilte Einzelausfälle, Rate 4 % der Personentage | `absence_s1`, `absence_s1_notice_h` | 23 Ereignisse (3,7 %) |
-| **S2** | Ausfallwelle: gleiche Grundrate, im Fenster 14.–19.12. verdreifacht (korrelierte Ausfälle) | `absence_s2`, `absence_s2_notice_h` | 32 Ereignisse (5,2 %) |
+| **S0** | keine kurzfristigen Ausfälle; nur geplante Abwesenheiten | beide Ausfallspalten 0 | 0 Ausfalltage |
+| **S1** | unabhängige Einzeltage, Rate 4 % je Person und Tag über den gesamten Horizont | `absence_s1`, `absence_s1_notice_h` | 26 Ausfalltage, 17 Personen |
+| **S2** | 7 Krankheitsepisoden von 2–4 Tagen; Beginn zu 80 % im Fenster 14.–19.12. | `absence_s2`, `absence_s2_notice_h` | 18 Ausfalltage, 5 Personen |
 
-Die Grundrate von 4 % ist aus dem TK-Wert von 28 AU-Tagen je Jahr in der Krankenpflege
-abgeleitet (≈ 7,7 % der Kalendertage), abzüglich des Anteils, der auf Langzeitfälle entfällt
-und im Datensatz bereits als `LANGZEITABWESENHEIT` **planbar** hinterlegt ist. Die Aufteilung
-zwischen Langzeit- und Kurzzeitanteil ist eine Annahme (A7).
+Die Wirkung dieser Kalibrierung:
 
-Das Feld `absence_s*_notice_h` (2 bis 24 Stunden Vorlauf) ist die entscheidende Größe für die zweite
-Hälfte der Leitfrage: Ein Ausfall, der 24 h vorher bekannt ist, lässt Umplanung zu; einer mit
-2 h Vorlauf zwingt zu Holen-aus-dem-Frei oder Unterbesetzung. Die Re-Rostering-Literatur
-(Wickert et al.) modelliert Störungen genau so und misst den Erfolg an der Nähe zum
-ursprünglichen Plan — das entspricht dem KPI „Planstabilität" der Projektvorgabe.
+| | S1 | S2 |
+|---|---|---|
+| Ausfalltage gesamt | 26 | 18 |
+| Anteil im Wellenfenster | 38 % | **67 %** |
+| betroffene Personen | 17 | **5** |
+| längste zusammenhängende Episode | 2 Tage | **4 Tage** |
+| Ausfälle je Tag **im** Wellenfenster | 1,67 | **2,00** |
+| Ausfälle je Tag **außerhalb** | 0,73 | **0,27** |
+
+S2 trifft also weniger als ein Drittel so viele Personen, diese dafür mehrtägig und
+weitgehend gleichzeitig. Innerhalb des Fensters ist die Tageslast rund siebenmal so hoch
+wie außerhalb; zwei Drittel aller Ausfalltage liegen in diesen sechs Tagen. Das ist das
+Bild einer Infektwelle auf Station.
+
+Über die 15 Instanzen der Evaluationskampagne gemittelt liegt S1 bei 17,0 und S2 bei 18,1
+Ausfalltagen — eine Abweichung von 6,7 %. Die Einzelinstanz oben streut um diesen Wert;
+die Kalibrierung gilt für das Mittel, nicht für jede Ziehung.
+
+### 5.2 Warum Episoden und nicht erhöhte Tagesraten
+
+Ein früheres Modell erhöhte im Wellenfenster lediglich die Tagesrate von 4 % auf 12 %. Das
+hatte zwei Mängel, die erst in der Auswertung auffielen:
+
+**Es erzeugte keine Episoden.** Jeder Tag wurde unabhängig gezogen, die längste
+zusammenhängende Abwesenheit einer Person betrug einen Tag. Real fehlt jemand, der heute
+krank ist, in aller Regel auch morgen — und genau diese Mehrtägigkeit bringt eine Station in
+Bedrängnis, nicht der verstreute Einzeltag.
+
+**Es veränderte den Umfang mit.** Über fünf Seeds erzeugte das alte S2 im Mittel 31,2
+Ausfalltage gegenüber 18,8 bei S1 — zwei Drittel mehr. Die beiden Szenarien unterschieden
+sich damit in zwei Dimensionen gleichzeitig.
+
+Das Episodenmodell behebt beides: Die Episodenzahl ist empirisch auf das Ausfallvolumen
+von S1 kalibriert. Über die 15 Kampagneninstanzen gemessen ergeben 7 Episoden im Mittel
+18,1 Ausfalltage gegenüber 17,0 bei S1 — 6,7 % Abweichung, gegenüber 22 % bei 8 Episoden
+und 9 % bei 6. Die Mehrtägigkeit ist zugleich explizit modelliert statt als Nebeneffekt
+einer erhöhten Tagesrate erhofft.
+
+### 5.3 Vorlaufzeit
+
+`absence_s*_notice_h` gibt an, wie viele Stunden vor Dienstbeginn die Meldung eingeht. In S2
+trägt nur der **erste Tag einer Episode** eine kurzfristige Meldung (2–12 Stunden); die
+Folgetage stehen mit 24 Stunden Vorlauf, weil eine laufende Krankmeldung dem Plan bereits
+bekannt ist. Die Spalte ist im Datensatz vorhanden, wird von den Planungsverfahren aber
+derzeit **nicht ausgewertet** — beide behandeln alle Ausfälle gleich. Das ist eine bewusste
+Vereinfachung und in Abschnitt 10 als Limitation geführt.
 
 Das Szenariodesign trennt sauber, was die Arbeit trennen muss: **S0 misst Planerstellung,
 S1/S2 messen Anpassungsfähigkeit.** Beide Verfahren erhalten identische Ereignisdateien.
@@ -321,7 +366,9 @@ Alles, was nicht belegt ist, steht hier — offen und einzeln prüfbar.
 | A4 | Verteilung des Pflegeaufwands je Patient | lognormal, Median 118 min, gestutzt auf 59–427 min | die Spannweite ist belegt, die Form innerhalb der Spannweite nicht | mittel |
 | A5 | Wochentagsprofil der Belegung | Mo–Do +5 bis +9 %, Fr −2 %, Sa/So −10 % | Elektivsteuerung und Entlassungen zum Wochenende | mittel |
 | A6 | Weihnachtseffekt | Faktor 0,80 ab 24.12. | reduzierter Elektivbetrieb | niedrig |
-| A7 | Anteil kurzfristiger an gesamten Ausfällen | Grundrate 4 % der Personentage | AU-Tage insgesamt sind belegt, die Aufteilung Kurz-/Langzeit nicht | **hoch** — Kerngröße der Szenarien |
+| A7 | Anteil kurzfristiger an gesamten Ausfällen (S1) | 4 % der Personentage | AU-Tage insgesamt sind belegt, die Aufteilung Kurz-/Langzeit nicht | **hoch** — Kerngröße der Szenarien |
+| A7a | Dauer einer Krankheitsepisode (S2) | 2–4 Tage, gleichverteilt | mehrtägige Abwesenheit ist der Normalfall; die konkrete Verteilung ist gesetzt | mittel |
+| A7b | Konzentration der Welle (S2) | 7 Episoden, Beginn zu 80 % im Sechstagefenster | Stärke und Länge einer Infektwelle sind nicht belegt; die Episodenzahl ist so kalibriert, dass S2 über die 15 Kampagneninstanzen dasselbe Ausfallvolumen trägt wie S1 (Ø 18,1 gegen 17,0 Ausfalltage, Abweichung 6,7 %) | **hoch** — bestimmt den Kontrast zwischen den Szenarien |
 | A8 | Zwei-Personen-Nachtdienst | Minimum 2 | die Untergrenze ergäbe bei 21 Patienten rechnerisch 1 Kraft; ein Alleindienst ist auf 30 Betten praktisch nicht vertretbar (Pausenablösung, § 4 ArbZG) | mittel |
 | A9 | Mindestbesetzung Tagdienst | 3 ab 15 Patienten | Pausenablösung und Vertretbarkeit | mittel |
 | A10 | Max. 5 Dienste in Folge, ≥ 2 freie Tage am Stück, max. 2 Wochenenden / 4 Wochen, max. 8 Nachtdienste / 4 Wochen | – | gestützt auf § 6 Abs. 1 ArbZG (arbeitswissenschaftliche Erkenntnisse), aber nicht beziffert im Gesetz | mittel |
@@ -329,7 +376,7 @@ Alles, was nicht belegt ist, steht hier — offen und einzeln prüfbar.
 | A12 | Historie per Greedy-Heuristik erzeugt | – | die Historie ist Eingabe, nicht Evaluationsgegenstand; sie muss nur regelkonform und plausibel sein | niedrig |
 | A13 | Ausfallzeiten für den Bruttobedarf | 30 Urlaub + 20 AU + 5 Fortbildung von 251 Arbeitstagen | Urlaub und AU belegt, Fortbildungstage und Jahresarbeitstage gesetzt | mittel |
 
-Die Annahmen mit hoher Sensitivität (A3, A7) gehören in die Limitationen der Hausarbeit und
+Die Annahmen mit hoher Sensitivität (A3, A7, A7b) gehören in die Limitationen der Hausarbeit und
 eignen sich als Sensitivitätsanalyse: Der Generator ist parametrisiert, ein Lauf mit
 verändertem A7 und identischem Seed erzeugt eine vergleichbare Variante des Datensatzes.
 

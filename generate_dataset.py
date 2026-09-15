@@ -121,9 +121,13 @@ MAX_WEEKENDS_PER_4W = 2        # [ANNAHME]
 MAX_NIGHTS_PER_4W = 8          # [ANNAHME]
 
 # Ausfallszenarien (kurzfristige Nichtverfuegbarkeit, ohne Grund/Diagnose)
+# S1 und S2 sind auf denselben Umfang kalibriert und unterscheiden sich nur
+# in der Struktur - siehe build_scenarios().
 SCEN_S1_RATE = 0.040           # [ANNAHME] abgeleitet aus [TK]
-SCEN_S2_RATE = 0.040           # Grundrate; im Cluster erhoeht
-SCEN_S2_CLUSTER_FACTOR = 3.0   # [ANNAHME]
+SCEN_S2_EPISODES = 7           # [ANNAHME] kalibriert auf das Ausfallvolumen von S1
+SCEN_S2_DUR_MIN = 2            # [ANNAHME] Dauer einer Krankheitsepisode
+SCEN_S2_DUR_MAX = 4            # [ANNAHME]
+SCEN_S2_WINDOW_SHARE = 0.80    # [ANNAHME] Anteil der Episoden im Wellenfenster
 SCEN_S2_CLUSTER_START = date(2026, 12, 14)
 SCEN_S2_CLUSTER_LEN = 6
 
@@ -590,46 +594,85 @@ def build_history(staff, demand_rows):
 # --------------------------------------------------------------------------
 
 def build_scenarios(staff, demand_rows, unavailable):
+    """
+    Zwei Ausfallszenarien, die sich in der STRUKTUR unterscheiden, nicht im
+    Umfang - sonst waere der Vergleich konfundiert und jede Differenz liesse
+    sich ebenso gut mit "mehr Ausfaelle" erklaeren.
+
+    S1  unabhaengige Einzeltage, Rate SCEN_S1_RATE ueber den ganzen Horizont.
+    S2  mehrtaegige Krankheitsepisoden, deren Beginn ueberwiegend in ein
+        sechstaegiges Fenster faellt. Die Zahl der Episoden ist so gewaehlt,
+        dass die erwarteten Ausfalltage denen von S1 entsprechen.
+
+    Das Episodenmodell ist die realistischere Abbildung: Wer heute krank ist,
+    fehlt in aller Regel auch morgen. Das frueher verwendete Modell (gleiche
+    Tagesrate, im Fenster verdreifacht) erzeugte verstreute Einzeltage und
+    zugleich rund 60 % mehr Ausfaelle als S1 - beides unerwuenscht.
+    """
     scen_meta = [
         {"scenario_id": "S0", "name": "Referenz ohne kurzfristige Ausfaelle",
-         "description": "Basisplan; nur geplante Abwesenheiten aus availability.csv.",
-         "short_notice_rate": 0.0, "clustered": 0,
+         "description": "Basisplan; nur geplante Abwesenheiten.",
+         "struktur": "keine", "erwartete_ausfalltage": 0,
          "source": "Referenzszenario fuer die Baseline-Messung"},
         {"scenario_id": "S1", "name": "Regelbetrieb mit verteilten Ausfaellen",
-         "description": "Kurzfristige Nichtverfuegbarkeit einzelner Dienste, "
-                        "unabhaengig ueber den Horizont verteilt.",
-         "short_notice_rate": SCEN_S1_RATE, "clustered": 0,
+         "description": "Unabhaengige Einzeltage ueber den gesamten Horizont.",
+         "struktur": "unabhaengig",
+         "erwartete_ausfalltage": round(SCEN_S1_RATE * PLAN_DAYS * 100) / 100,
          "source": "Rate abgeleitet aus TK-Gesundheitsreport (28 AU-Tage/Jahr), "
                    "Langzeitanteil herausgerechnet [ANNAHME]"},
         {"scenario_id": "S2", "name": "Ausfallwelle",
-         "description": "Gleiche Grundrate wie S1, zusaetzlich verdreifachte Rate "
-                        "in einem sechstaegigen Fenster (korrelierte Ausfaelle).",
-         "short_notice_rate": SCEN_S2_RATE, "clustered": 1,
-         "source": "Clusterannahme fuer Infektwellen [ANNAHME]"},
+         "description": f"{SCEN_S2_EPISODES} Krankheitsepisoden von "
+                        f"{SCEN_S2_DUR_MIN}-{SCEN_S2_DUR_MAX} Tagen; Beginn zu "
+                        f"{SCEN_S2_WINDOW_SHARE:.0%} im Fenster "
+                        f"{SCEN_S2_CLUSTER_START:%d.%m.} + "
+                        f"{SCEN_S2_CLUSTER_LEN} Tage.",
+         "struktur": "korreliert (Episoden)",
+         "erwartete_ausfalltage": SCEN_S2_EPISODES
+                                  * (SCEN_S2_DUR_MIN + SCEN_S2_DUR_MAX) / 2,
+         "source": "Episodenlaenge und Clusterung [ANNAHME]"},
     ]
 
     plan_days = [PLAN_START + timedelta(days=k) for k in range(PLAN_DAYS)]
+    ids = [e.employee_id for e in staff]
     events = []
-    for meta in scen_meta:
-        if meta["short_notice_rate"] == 0:
-            continue
-        for d in plan_days:
-            rate = meta["short_notice_rate"]
-            if meta["clustered"] and 0 <= (d - SCEN_S2_CLUSTER_START).days < SCEN_S2_CLUSTER_LEN:
-                rate *= SCEN_S2_CLUSTER_FACTOR
-            for e in staff:
-                if (e.employee_id, d.isoformat()) in unavailable:
-                    continue
-                if rng.random() < rate:
-                    events.append({
-                        "scenario_id": meta["scenario_id"],
-                        "employee_id": e.employee_id,
-                        "date": d.isoformat(),
-                        "shift_id": "ALL",
-                        "available": 0,
-                        "notice_hours": int(rng.choice([2, 4, 8, 12, 12, 24])),
-                        "event_type": "KURZFRISTIGE_NICHTVERFUEGBARKEIT",
-                    })
+
+    def add(scen, eid, d, notice):
+        if (eid, d.isoformat()) in unavailable:
+            return
+        events.append({
+            "scenario_id": scen, "employee_id": eid, "date": d.isoformat(),
+            "shift_id": "ALL", "available": 0, "notice_hours": int(notice),
+            "event_type": "KURZFRISTIGE_NICHTVERFUEGBARKEIT",
+        })
+
+    # --- S1: unabhaengige Einzeltage --------------------------------------
+    for d in plan_days:
+        for eid in ids:
+            if rng.random() < SCEN_S1_RATE:
+                add("S1", eid, d, rng.choice([2, 4, 8, 12, 12, 24]))
+
+    # --- S2: mehrtaegige Episoden, Beginn ueberwiegend im Fenster ---------
+    belegt: set[tuple[str, str]] = set()
+    for _ in range(SCEN_S2_EPISODES):
+        eid = str(rng.choice(ids))
+        dauer = int(rng.integers(SCEN_S2_DUR_MIN, SCEN_S2_DUR_MAX + 1))
+        if rng.random() < SCEN_S2_WINDOW_SHARE:
+            offset = (SCEN_S2_CLUSTER_START - PLAN_START).days
+            start = offset + int(rng.integers(-1, SCEN_S2_CLUSTER_LEN - 1))
+        else:
+            start = int(rng.integers(0, PLAN_DAYS))
+        # Erster Tag ist die kurzfristige Meldung, Folgetage sind bekannt.
+        notice_erst = int(rng.choice([2, 4, 8, 12]))
+        for k in range(dauer):
+            i = start + k
+            if not 0 <= i < PLAN_DAYS:
+                continue
+            d = plan_days[i]
+            if (eid, d.isoformat()) in belegt:
+                continue
+            belegt.add((eid, d.isoformat()))
+            add("S2", eid, d, notice_erst if k == 0 else 24)
+
     events.sort(key=lambda r: (r["scenario_id"], r["date"], r["employee_id"]))
     return scen_meta, events
 

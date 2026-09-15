@@ -15,6 +15,11 @@ validate_dataset.py         Prüfskript für den Datensatz
 campaign.py                 Evaluationskampagne über mehrere Instanzen
 evaluation_results.csv      Rohergebnisse der Kampagne (180 Pläne)
 ERGEBNISSE.md               Evaluation: Aufbau, Ergebnisse, Limitationen
+make_charts.py              Abbildungen aus den Kampagnendaten
+make_gantt.py               Gantt-Diagramm des Projektverlaufs (Termine anpassen!)
+make_deck.js                Präsentationsfolien (pptxgenjs)
+abbildungen/                erzeugte PNGs für Bericht und Präsentation
+HANDOUT.md                  zweiseitiges Handout für die Kommiliton:innen
 DATENKONZEPT.md             Begründung jeder Spalte und jedes Parameters mit Quellen
 ```
 
@@ -75,8 +80,16 @@ Van den Bergh et al. 2013).
 ```bash
 python test_planner.py       # Planungslogik gegen den Datensatz
 python validate_dataset.py   # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
-python campaign.py           # Evaluationskampagne, 15 Instanzen (~15 Min.)
+python campaign.py           # Evaluationskampagne, 15 Instanzen (~14 Min.)
 python campaign.py --report  # aggregierte Auswertung der Kampagne
+```
+
+## Abgabeartefakte erzeugen
+
+```bash
+python make_charts.py   # Abbildungen aus evaluation_results.csv
+python make_gantt.py    # Gantt-Diagramm (Termine vorher in der Datei anpassen)
+node make_deck.js       # Praesentation_Schichtplanung.pptx
 ```
 
 Beide Skripte laufen ohne Streamlit und geben Exit-Code 0 zurück, wenn alle harten
