@@ -320,24 +320,24 @@ s.addNotes("Für die Personalbindung ist das der relevante Wert: Zwei Pläne mit
 // ---------- 11 Ergebnis Planstabilitaet -----------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
-  "Der wichtigste Befund — und er stellt die Erwartung auf den Kopf.",
-  IMG("03_planstabilitaet.png"), 1.721, [
-    { t: "Neu optimieren ist schlechter", d: "als die simple Heuristik: 50 % gegenüber 77 % unveränderte Dienste. Der Monat wird faktisch neu gemacht." },
-    { t: "Mit Stabilität als Ziel", d: "steigt der Wert auf 95 % — bei gleicher Besetzungsquote und in unter einer Sekunde." },
-    { t: "Die Lehre", d: "Optimierung ist nur so gut wie die Ziele, die man ihr vorgibt." },
+  "Zwei Befunde — einer über die Zielfunktion, einer über die Messung selbst.",
+  IMG("03_planstabilitaet.png"), 2.027, [
+    { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur 51 % der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 95 %." },
+    { t: "Rechts: derselbe Ausgangsplan", d: "Erst so sind die Verfahren vergleichbar. Unter der Welle: 91 % gegen 87 % — die Optimierung in 14 von 15 Instanzen vorn." },
+    { t: "Warum das nötig war", d: "Wer jedes Verfahren gegen seinen eigenen Plan misst, belohnt den schlechteren Planer: Einen schwachen Plan zu halten ist billig." },
   ]);
-s.addNotes("Betonen: Nicht das Verfahren entscheidet, sondern die Zielfunktion. Das ist unser methodischer Kernbefund.");
+s.addNotes("Zwei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens: Wir hatten die Planstabilitaet zunaechst falsch gemessen, jedes Verfahren gegen seinen eigenen Ausgangsplan. Der Greedy-Plan ist schlechter, und einen schlechten Plan unveraendert zu lassen kostet nichts. Auf identischem Ausgangsplan dreht sich das Ergebnis. Diesen Fehler zeigen wir offen - er ist lehrreicher als das Ergebnis.");
 
 // ---------- 12 Ergebnis Ausfallstruktur -----------------------------------
 s = pres.addSlide();
-chartSlide(s, "Ergebnis 4: Wo die Optimierung an ihre Grenze kommt",
-  "Bei vergleichbarem Ausfallvolumen: Unter der Welle verteilt sie die Last nicht mehr gleichmäßiger als die Heuristik.",
-  IMG("05_ausfallstruktur.png"), 1.795, [
-    { t: "Der Vorsprung verschwindet", d: "Ohne Störung verteilt die Optimierung die Last 2,5-mal gleichmäßiger. Unter der Welle: 38 gegen 38 — kein Unterschied mehr." },
-    { t: "Warum", d: "Gleichverteilung braucht Spielraum. Fallen mehrere Personen gleichzeitig mehrtägig aus, ist keiner mehr da, der übernehmen könnte." },
-    { t: "Was bleibt", d: "Die Regelkonformität: null Verstöße gegen 1,20 bei der Baseline. Optimierung sichert Recht, nicht Gerechtigkeit." },
+chartSlide(s, "Ergebnis 4: Der Zielkonflikt, den Excel nicht sichtbar macht",
+  "Gleichmäßige Last oder stabiler Plan — unter der Ausfallwelle ist beides zugleich nicht zu haben.",
+  IMG("05_zielkonflikt.png"), 1.847, [
+    { t: "Nicht die Welle", d: "Bei vollständiger Neuplanung hält die Optimierung die Spanne auch unter S2 auf 16 Punkten. Die Heuristik liegt bei 33." },
+    { t: "Sondern die Zielfunktion", d: "Gewicht 200 für „nicht ändern“ gegen 0,02 für Lastausgleich. Dann füllt das Modell nur noch Lücken — wie die Heuristik." },
+    { t: "Eine Führungsfrage", d: "Welches Ziel schwerer wiegt, entscheidet nicht das Verfahren. Der Prototyp macht den Preis beider Optionen sichtbar." },
   ]);
-s.addNotes("Kritisch einordnen: Wir haben zusaetzlich auf den Instanzen geprueft, in denen S2 NICHT mehr Ausfalltage hat als S1. Der Verteilungseffekt bleibt dort in 6 von 6 Faellen bestehen - er ist strukturell. Der Stabilitaetsunterschied schrumpft dagegen von 2,6 auf 0,8 Prozentpunkte, ist also ueberwiegend ein Volumeneffekt. Das sagen wir ausdruecklich dazu.");
+s.addNotes("Haeufige Rueckfrage: Warum ist der Abstand bei Spanne und Stabilitaet unter S2 so klein? Drei Punkte. Erstens: Er liegt an der Zielfunktion, nicht an der Welle - bei voller Neuplanung bleibt die Optimierung klar vorn. Zweitens: Die Heuristik erreicht ihre Spanne teilweise dadurch, dass sie 3,9 Dienste gar nicht besetzt - unbesetzte Dienste erzeugen weder Auslastung noch Planaenderung. Drittens: Auf allen anderen Kennzahlen ist der Abstand unter S2 riesig - 100 gegen 97,9 Prozent Besetzung, null gegen 1,2 harte Verstoesse.");
 
 // ---------- 13 Business Impact --------------------------------------------
 s = pres.addSlide();
@@ -350,7 +350,7 @@ s.addText("Gemessen", {
 s.addText([
   { text: "Regelkonformität unter Knappheit: 100 % gegenüber 0 % der Pläne", options: { bullet: true, breakLine: true } },
   { text: "Ungleichverteilung der Last um Faktor fünf reduziert — aber nur ohne Ausfallwelle", options: { bullet: true, breakLine: true } },
-  { text: "Planänderungen nach Ausfällen: rund 23 statt 277", options: { bullet: true, breakLine: true } },
+  { text: "Umplanung auf identischem Plan: 15 statt 25 Änderungen", options: { bullet: true, breakLine: true } },
   { text: "Umplanung in unter einer Sekunde", options: { bullet: true } },
 ], {
   x: M + 0.35, y: 2.75, w: 5.15, h: 2.9, isTextBox: true, margin: 0,

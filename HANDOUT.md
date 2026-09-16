@@ -40,12 +40,12 @@ Quellen abgeleitet (PpUGV, ArbZG, TVöD-K, Destatis, PPR 2.0) und über einen fe
 exakt reproduzierbar.
 
 Evaluiert wurde über **15 Instanzen** (5 Zufallsseeds × 3 Personaldecken) × 3
-Ausfallszenarien × 4 Verfahrensvarianten = **180 Pläne**. Die beiden Ausfallszenarien sind
+Ausfallszenarien × 6 Verfahrensvarianten = **270 Pläne**. Die beiden Ausfallszenarien sind
 auf dasselbe Ausfallvolumen kalibriert und unterscheiden sich nur in der Struktur —
 verteilte Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der
 Struktur zuzurechnen ist und nicht dem Umfang.
 
-## Die sieben wichtigsten Learnings
+## Die acht wichtigsten Learnings
 
 **1. Machine Learning war nicht die Antwort — und das war das erste Ergebnis.**
 Es gibt keine zu lernende Zielvariable und keine historischen Planentscheidungen als
@@ -61,10 +61,9 @@ systematisch auf 90 % und 80 % absenkten, trennten sich die Verfahren: Bei 80 % 
 optimierten Pläne. Wer nur eine bequeme Instanz rechnet, misst nichts.
 
 **3. Die Zielfunktion entscheidet, nicht das Verfahren.**
-Nach einem Ausfall neu zu optimieren lieferte *schlechtere* Planstabilität als die
-simple Heuristik (50 % gegen 77 % unveränderte Dienste). Erst als „möglichst wenig
-ändern" ausdrücklich ins Modell kam, stieg die Stabilität auf 95 %. Optimierung ist nur
-so gut wie die Ziele, die man ihr vorgibt.
+Nach einem Ausfall neu zu optimieren erhielt nur 51 % der Dienste — schlechter als die
+simple Heuristik. Erst als „möglichst wenig ändern" ausdrücklich ins Modell kam, stieg die
+Stabilität auf 95 %. Optimierung ist nur so gut wie die Ziele, die man ihr vorgibt.
 
 **4. Regeln gehören in die Daten, nicht in den Code.**
 Ruhezeiten, Verhältniszahlen und Qualifikationsvorgaben stehen als Spalten im Datensatz.
@@ -76,18 +75,29 @@ Eine eigene Funktion bewertet den fertigen Plan unabhängig davon, wer ihn erzeu
 Ohne diese Trennung wäre jeder KPI-Vergleich zirkulär gewesen — und sie hat uns
 tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
-**6. Der Vorteil der Optimierung verschwindet genau dann, wenn man ihn bräuchte.**
-Ohne Störung verteilt sie die Arbeitslast 2,5-mal gleichmäßiger als die Heuristik. Unter
-einer gebündelten Ausfallwelle ist der Unterschied **null** (Spanne 0,376 gegen 0,380).
-Gleichverteilung setzt Spielraum voraus — fallen mehrere Personen gleichzeitig mehrtägig
-aus, ist keiner mehr da, der übernehmen könnte. Was bleibt, ist die Regelkonformität.
-Optimierung nutzt vorhandenen Spielraum besser aus; sie erzeugt keinen.
+**6. Zwei Ziele, die einander unter Druck ausschließen.**
+Unter der Ausfallwelle liegen beide Verfahren bei der Lastverteilung gleichauf (Spanne
+0,376 gegen 0,380) — aber nicht, weil die Optimierung versagt. Bei vollständiger
+Neuplanung hält sie die Spanne auch dort auf 0,164, halb so hoch wie die Heuristik. Den
+Vorsprung gibt sie erst auf, wenn wir ihr *Planstabilität* als vorrangiges Ziel vorgeben:
+Gewicht 200 für „nicht ändern" gegen 0,02 für Lastausgleich. Dann füllt sie nur noch
+Lücken. Gleichmäßige Last **oder** stabiler Plan — unter Druck ist beides zugleich nicht
+zu haben, und welches Ziel gewinnt, ist eine Führungsentscheidung.
 
-**7. Einen Effekt messen heißt, die Alternativerklärung ausschließen.**
-Die Ausfallwelle sah zunächst auch instabiler aus. Als wir nur die Instanzen betrachteten,
-in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der Stabilitätsunterschied von
-2,6 auf 0,8 Prozentpunkte — er war überwiegend ein Mengen-, kein Struktureffekt. Der
-Verteilungseffekt hielt der Prüfung stand (6 von 6 Instanzen). Nur den berichten wir.
+**7. Unsere wichtigste Kennzahl war zunächst falsch gemessen.**
+Wir hatten die Planstabilität jedes Verfahrens gegen **seinen eigenen** Ausgangsplan
+gemessen. Der Plan der Heuristik ist aber deutlich schlechter (15,3 gegen 1,1 weiche
+Regelverstöße) — und einen schwachen Plan unverändert zu lassen ist billig, weil es nichts
+zu verteidigen gibt. Die Messung belohnte also den schlechteren Planer. Lassen wir **beide
+Verfahren denselben Plan reparieren**, dreht sich das Ergebnis: 95,0 % gegen 91,8 %
+Stabilität bei 15 statt 25 Änderungen. Eine Kennzahl, deren Bezugspunkt man nicht mitnennt,
+ist nicht interpretierbar.
+
+**8. Einen Effekt messen heißt, die Alternativerklärung ausschließen.**
+Die Ausfallwelle sah zunächst auch instabiler aus als verteilte Einzelausfälle. Als wir nur
+die Instanzen betrachteten, in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der
+Unterschied von 2,5 auf 0,8 Prozentpunkte — überwiegend ein Mengen-, kein Struktureffekt.
+Der Verteilungseffekt hielt der Prüfung stand (6 von 6 Instanzen). Nur den berichten wir.
 
 ## Herausforderungen
 
@@ -118,9 +128,9 @@ einer Viertelsekunde für eine Umplanung.
 ## Was wir gemessen haben — und was nicht
 
 **Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,3
-Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast im Normalbetrieb (Spanne
-von 33 auf 7 Prozentpunkte) und ihr Verschwinden unter der Ausfallwelle, Planstabilität
-nach Ausfällen (94–96 % statt 49–79 %), Rechenzeit.
+Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 33 auf 7
+Prozentpunkte), Planstabilität nach Ausfällen auf identischem Ausgangsplan (95,0 % gegen
+91,8 %), der Zielkonflikt zwischen Lastverteilung und Stabilität, Rechenzeit.
 
 **Nicht gemessen, nur plausibel:** Reduktion des manuellen Planungsaufwands, Wirkung auf
 Zufriedenheit und Fluktuation, vermiedene Bettensperrungen. Diese Aussagen bräuchten eine

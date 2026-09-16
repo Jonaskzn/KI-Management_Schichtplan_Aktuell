@@ -64,6 +64,11 @@ def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
 
     rows = []
     for scenario in P.SCENARIOS:
+        # Reaktive Varianten werden zusaetzlich ueber Kreuz gerechnet: jedes
+        # Verfahren repariert einmal seinen eigenen und einmal den fremden
+        # Ausgangsplan. Nur auf identischem Ausgangsplan ist die Planstabilitaet
+        # zwischen den Verfahren vergleichbar - ein schlechter Ausgangsplan
+        # laesst sich billiger unveraendert lassen als ein guter.
         plans = {
             "Greedy": (P.plan_greedy(ctx, scenario), ref_greedy),
             "Greedy reaktiv": (P.plan_greedy(ctx, scenario,
@@ -71,6 +76,11 @@ def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
             "MILP": (P.plan_milp(ctx, scenario, time_limit_s=time_limit), ref_milp),
             "MILP reaktiv": (P.plan_milp(ctx, scenario, reference=ref_milp,
                                          time_limit_s=time_limit), ref_milp),
+            # Kreuzvergleich: gleicher Ausgangsplan, unterschiedliches Verfahren
+            "Greedy auf MILP-Plan": (P.plan_greedy(ctx, scenario,
+                                                   fixed=ref_milp.assignments), ref_milp),
+            "MILP auf Greedy-Plan": (P.plan_milp(ctx, scenario, reference=ref_greedy,
+                                                 time_limit_s=time_limit), ref_greedy),
         }
         for name, (plan, ref) in plans.items():
             k = P.evaluate(ctx, plan)
@@ -138,7 +148,8 @@ def report(path: str = RESULTS) -> str:
 
     d = pd.read_csv(path)
     n_inst = d.groupby("staffing_factor")["seed"].nunique()
-    order = ["Greedy", "Greedy reaktiv", "MILP", "MILP reaktiv"]
+    order = ["Greedy", "Greedy reaktiv", "MILP", "MILP reaktiv",
+             "Greedy auf MILP-Plan", "MILP auf Greedy-Plan"]
     d["method"] = pd.Categorical(d["method"], order, ordered=True)
 
     out = []
@@ -157,21 +168,42 @@ def report(path: str = RESULTS) -> str:
         "planungszeit_s": ("Planungszeit (s)", "{:.2f}"),
     }
 
+    basis = ["Greedy", "Greedy reaktiv", "MILP", "MILP reaktiv"]
+
     for factor, block in d.groupby("staffing_factor"):
         out.append(f"\n### Personaldecke {factor:.0%} des Bruttobedarfs "
                    f"({n_inst[factor]} Seeds, Ø {block['headcount'].mean():.0f} Koepfe)\n")
-        head = f"{'Kennzahl':<26s}" + "".join(f"{m:>17s}" for m in order)
+        head = f"{'Kennzahl':<26s}" + "".join(f"{m:>17s}" for m in basis)
         out.append(head)
         out.append("-" * len(head))
         for key, (label, fmt) in metrics.items():
             cells = []
-            for m in order:
+            for m in basis:
                 sub = block[block["method"] == m][key]
                 mean, sd = sub.mean(), sub.std()
                 cells.append(f"{fmt.format(mean)} ±{fmt.format(sd).lstrip('0')}"
                              if key not in ("besetzungsquote", "planstabilitaet")
                              else f"{fmt.format(mean)}")
             out.append(f"{label:<26s}" + "".join(f"{c:>17s}" for c in cells))
+
+    out.append("\n\n### Fairer Stabilitaetsvergleich: identischer Ausgangsplan\n")
+    out.append("Planstabilitaet ist nur vergleichbar, wenn beide Verfahren denselben\n"
+               "Ausgangsplan reparieren - ein schlechter Plan laesst sich billiger\n"
+               "unveraendert lassen als ein guter.\n")
+    paare = [("Ausgangsplan der Heuristik", "Greedy reaktiv", "MILP auf Greedy-Plan"),
+             ("Ausgangsplan der Optimierung", "Greedy auf MILP-Plan", "MILP reaktiv")]
+    for titel, m_g, m_m in paare:
+        out.append(f"\n  {titel}")
+        for key, label in [("planstabilitaet", "Planstabilitaet"),
+                           ("geaenderte_zuweisungen", "geaenderte Zuweisungen"),
+                           ("weiche_abweichungen", "weiche Abweichungen"),
+                           ("harte_verstoesse", "harte Regelverstoesse"),
+                           ("offene_slots", "offene Dienste")]:
+            g = d[d["method"] == m_g][key].mean()
+            m = d[d["method"] == m_m][key].mean()
+            f = "{:.1%}" if key == "planstabilitaet" else "{:.2f}"
+            out.append(f"    {label:<24s} Heuristik {f.format(g):>8s}   "
+                       f"Optimierung {f.format(m):>8s}")
 
     out.append("\n\n### Verstoesse nach Szenario (alle Personaldecken)\n")
     piv = d.pivot_table(index=["scenario", "method"], observed=True,

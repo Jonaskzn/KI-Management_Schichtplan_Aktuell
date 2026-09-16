@@ -262,21 +262,34 @@ with tabs[0]:
 with tabs[1]:
     st.markdown("**Beide Verfahren auf identischer Datengrundlage**, gleiches "
                 "Szenario, gleiche Regeln. Das ist der Kern der Evaluation.")
-    if st.button("Vergleich rechnen", type="primary"):
-        st.session_state["compare_key"] = (data_key, scenario, manual_key, time_limit)
+    ref_label = st.radio(
+        "Gemeinsamer Ausgangsplan, den beide Verfahren reparieren",
+        list(METHODS.keys()), index=1, horizontal=True,
+        help="Die Planstabilitaet ist nur vergleichbar, wenn beide Verfahren "
+             "denselben Plan vorfinden. Ein schlechter Ausgangsplan laesst sich "
+             "billiger unveraendert lassen als ein guter - wer jedes Verfahren "
+             "gegen seinen eigenen Plan misst, belohnt den schlechteren Planer.")
+    ref_m = METHODS[ref_label]
 
-    if st.session_state.get("compare_key") == (data_key, scenario, manual_key, time_limit):
+    if st.button("Vergleich rechnen", type="primary"):
+        st.session_state["compare_key"] = (data_key, scenario, manual_key,
+                                           time_limit, ref_m)
+
+    if st.session_state.get("compare_key") == (data_key, scenario, manual_key,
+                                               time_limit, ref_m):
+        with st.spinner(f"Ausgangsplan ({ref_label}) ..."):
+            shared_ref = cached((data_key, ref_m, "REF", (), time_limit),
+                                lambda: compute(ref_m, REFERENCE_SCENARIO, set(),
+                                                limit=time_limit))
         rows = []
         for label, m in METHODS.items():
             with st.spinner(f"{label} ..."):
-                m_ref = cached((data_key, m, "REF", (), time_limit),
-                               lambda m=m: compute(m, REFERENCE_SCENARIO, set(),
-                                                   limit=time_limit))
-                m_cur = cached((data_key, m, scenario, manual_key, True, time_limit),
-                               lambda m=m, r=m_ref: compute(m, scenario, manual, r,
-                                                            time_limit))
+                m_cur = cached((data_key, m, scenario, manual_key, "SHARED",
+                                ref_m, time_limit),
+                               lambda m=m: compute(m, scenario, manual, shared_ref,
+                                                   time_limit))
             k = P.evaluate(ctx, m_cur)
-            s = P.stability(m_ref, m_cur)
+            s = P.stability(shared_ref, m_cur)
             rows.append({
                 "Verfahren": label,
                 "Besetzungsquote": f"{k['besetzungsquote']:.1%}",
@@ -288,14 +301,23 @@ with tabs[1]:
                 "Spanne Auslastung": f"{k['auslastung_spanne']:.1%}",
                 "Hilfskraftanteil": f"{k['hilfskraftanteil']:.1%}",
                 "Planstabilitaet": f"{s['planstabilitaet']:.1%}",
+                "geaenderte Zuweisungen": s["geaenderte_zuweisungen"],
                 "Planungszeit (s)": round(k["planungszeit_s"], 2),
             })
         st.dataframe(pd.DataFrame(rows).set_index("Verfahren").T,
                      use_container_width=True)
-        st.caption("Planstabilitaet jeweils gegenueber dem Referenzplan desselben "
-                   "Verfahrens. Streuung und Spanne der Auslastung messen, wie "
-                   "gleichmaessig die Arbeit ueber die Belegschaft verteilt ist - "
-                   "erst sie unterscheiden zwei Plaene mit gleicher Besetzungsquote.")
+        ref_k = P.evaluate(ctx, shared_ref)
+        st.caption(
+            f"Beide Verfahren reparieren denselben Ausgangsplan ({ref_label}: "
+            f"{ref_k['weiche_abweichungen']} weiche Abweichungen, Spanne "
+            f"{ref_k['auslastung_spanne']:.1%}). Nur so ist die Planstabilitaet "
+            "zwischen den Verfahren vergleichbar: Wird jedes Verfahren gegen "
+            "seinen eigenen Ausgangsplan gemessen, schneidet das Verfahren mit "
+            "dem schlechteren Ausgangsplan scheinbar besser ab, weil sich ein "
+            "schwacher Plan billiger unveraendert lassen laesst. Streuung und "
+            "Spanne der Auslastung messen, wie gleichmaessig die Arbeit ueber "
+            "die Belegschaft verteilt ist - erst sie unterscheiden zwei Plaene "
+            "mit gleicher Besetzungsquote.")
     else:
         st.caption("Der Vergleich rechnet beide Verfahren durch und braucht je nach "
                    "Rechenzeitgrenze einige Sekunden.")

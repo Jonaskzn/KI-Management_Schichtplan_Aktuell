@@ -134,25 +134,59 @@ save(fig, "02_untergrenzen.png")
 # --------------------------------------------------------------------------
 # 3  Planstabilitaet nach Ausfall
 # --------------------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(9, 4.6))
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.7))
+
+# links: innerhalb eines Verfahrens - Neuplanung gegen reaktive Umplanung
+ax = axes[0]
 methods = ["Greedy", "Greedy reaktiv", "MILP", "MILP reaktiv"]
 names = ["Regelbasiert\nNeuplanung", "Regelbasiert\nreaktiv",
          "MILP\nNeuplanung", "MILP\nreaktiv"]
 vals = [d[d["method"] == mth]["planstabilitaet"].mean() * 100 for mth in methods]
-colors = [BLUE_L, BLUE, ORANGE_L, ORANGE]
-bars = ax.bar(range(4), vals, 0.55, color=colors)
+bars = ax.bar(range(4), vals, 0.55, color=[BLUE_L, BLUE, ORANGE_L, ORANGE])
 for bar in bars:
     ax.annotate(f"{bar.get_height():.0f} %",
                 (bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                ha="center", va="bottom", fontsize=12, color=INK, xytext=(0, 3),
+                ha="center", va="bottom", fontsize=11, color=INK, xytext=(0, 3),
                 textcoords="offset points")
 frame(ax, "unveränderte Zuweisungen in %")
-ax.set_xticks(range(4), names, fontsize=10)
-ax.set_ylim(0, 108)
-ax.set_title("Planstabilität nach kurzfristigen Ausfällen", pad=16)
-ax.text(0, -0.26, "Anteil der (Person, Tag)-Zuweisungen, die gegenüber dem Ausgangsplan bestehen "
-                  "bleiben · alle Personaldecken und Szenarien",
-        transform=ax.transAxes, fontsize=9, color=MUTED)
+ax.set_xticks(range(4), names, fontsize=9)
+ax.set_ylim(0, 112)
+ax.set_title("Je Verfahren: Neuplanung oder Reparatur", fontsize=13, pad=12)
+
+# rechts: zwischen den Verfahren - beide reparieren denselben Ausgangsplan
+ax = axes[1]
+SC = ["S0", "S1", "S2"]
+LBL = ["S0\nkeine Ausfälle", "S1\nverteilte Einzeltage", "S2\nAusfallwelle"]
+gre = [d[(d.method == "Greedy auf MILP-Plan") & (d.scenario == sc)]["planstabilitaet"].mean() * 100
+       for sc in SC]
+mil = [d[(d.method == "MILP reaktiv") & (d.scenario == sc)]["planstabilitaet"].mean() * 100
+       for sc in SC]
+x = range(3)
+b1 = ax.bar([i - 0.19 for i in x], gre, 0.36, color=BLUE, label="Regelbasiert repariert")
+b2 = ax.bar([i + 0.19 for i in x], mil, 0.36, color=ORANGE, label="MILP repariert")
+for bset in (b1, b2):
+    for bar in bset:
+        ax.annotate(f"{bar.get_height():.0f} %",
+                    (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                    ha="center", va="bottom", fontsize=10, color=INK,
+                    xytext=(0, 3), textcoords="offset points")
+frame(ax, "unveränderte Zuweisungen in %")
+ax.set_xticks(list(x), LBL, fontsize=9)
+ax.set_ylim(0, 118)
+ax.set_title("Zwischen den Verfahren: derselbe Ausgangsplan", fontsize=13, pad=12)
+ax.legend(frameon=False, fontsize=9, loc="upper center", ncol=2,
+          bbox_to_anchor=(0.5, 1.02))
+
+fig.suptitle("Planstabilität nach kurzfristigen Ausfällen",
+             fontsize=15, fontweight="bold", y=1.04)
+fig.text(0.0, -0.085,
+         "Anteil der (Person, Tag)-Zuweisungen, die gegenüber dem Ausgangsplan bestehen "
+         "bleiben · alle Personaldecken\nRechts reparieren beide Verfahren denselben "
+         "Plan. Ohne diese Bedingung schneidet das Verfahren mit dem schlechteren "
+         "Ausgangsplan\nscheinbar besser ab — einen schwachen Plan unveraendert zu "
+         "lassen ist billiger als einen guten gut zu halten.".replace("aendert", "ändert"),
+         fontsize=9, color=MUTED)
+fig.tight_layout()
 save(fig, "03_planstabilitaet.png")
 
 # --------------------------------------------------------------------------
@@ -183,54 +217,60 @@ ax.text(0, -0.32, "Abstand zwischen der am geringsten und der am stärksten ausg
 save(fig, "04_lastverteilung.png")
 
 # --------------------------------------------------------------------------
-# 5  Wirkung der Ausfallstruktur
+# 5  Zielkonflikt Lastverteilung gegen Planstabilitaet
 # --------------------------------------------------------------------------
 SCEN = ["S0", "S1", "S2"]
 SCEN_LBL = ["S0\nkeine Ausfälle", "S1\nverteilte Einzeltage", "S2\nAusfallwelle"]
+SERIES = [
+    ("Regelbasiert, reaktiv", "Greedy reaktiv", BLUE),
+    ("MILP, reaktiv", "MILP reaktiv", ORANGE),
+    ("MILP, vollständige Neuplanung", "MILP", ORANGE_L),
+]
 x = range(3)
 
 
 def _panel(ax, column, fmt, scale=1.0, ylabel=""):
-    gre = [d[(d.method == "Greedy reaktiv") & (d.scenario == sc)][column].mean() * scale
-           for sc in SCEN]
-    mil = [d[(d.method == "MILP reaktiv") & (d.scenario == sc)][column].mean() * scale
-           for sc in SCEN]
-    b1 = ax.bar([i - 0.19 for i in x], gre, 0.36, color=BLUE, label="Regelbasiert")
-    b2 = ax.bar([i + 0.19 for i in x], mil, 0.36, color=ORANGE, label="MILP-Optimierung")
-    for bars in (b1, b2):
+    top = 0
+    for k, (label, method, color) in enumerate(SERIES):
+        vals = [d[(d.method == method) & (d.scenario == sc)][column].mean() * scale
+                for sc in SCEN]
+        top = max(top, max(vals))
+        bars = ax.bar([i + (k - 1) * 0.27 for i in x], vals, 0.25,
+                      color=color, label=label)
         for bar in bars:
             ax.annotate(fmt(bar.get_height()),
                         (bar.get_x() + bar.get_width() / 2, bar.get_height()),
-                        ha="center", va="bottom", fontsize=10, color=INK,
+                        ha="center", va="bottom", fontsize=9, color=INK,
                         xytext=(0, 3), textcoords="offset points")
     frame(ax, ylabel)
     ax.set_xticks(list(x), SCEN_LBL, fontsize=9)
-    return max(gre + mil)
+    return top
 
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4.9))
+fig, axes = plt.subplots(1, 2, figsize=(11, 5.0))
 
 top = _panel(axes[0], "auslastung_spanne", lambda v: f"{v:.0f}".replace(".", ","),
              scale=100, ylabel="Spanne in Prozentpunkten")
-axes[0].set_ylim(0, top * 1.35)
-axes[0].set_title("Ungleichverteilung der Last", fontsize=13, pad=12)
-axes[0].legend(frameon=False, fontsize=9, loc="upper center", ncol=2,
-               bbox_to_anchor=(0.5, 1.02))
+axes[0].set_ylim(0, top * 1.22)
+axes[0].set_title("Ungleichverteilung der Last", fontsize=13, pad=30)
 
-_panel(axes[1], "planstabilitaet", lambda v: f"{v:.0f} %", scale=100,
+_panel(axes[1], "planstabilitaet", lambda v: f"{v:.0f}", scale=100,
        ylabel="unveränderte Zuweisungen in %")
 axes[1].set_ylim(0, 118)
-axes[1].set_title("Planstabilität", fontsize=13, pad=12)
+axes[1].set_title("Planstabilität in %", fontsize=13, pad=30)
 
-fig.suptitle("Wirkung der Ausfallstruktur bei vergleichbarem Ausfallvolumen",
-             fontsize=15, fontweight="bold", y=1.02)
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, frameon=False, fontsize=10, ncol=3,
+           loc="upper center", bbox_to_anchor=(0.5, 1.005))
+fig.suptitle("Der Zielkonflikt: gleichmäßige Last oder stabiler Plan",
+             fontsize=15, fontweight="bold", y=1.075)
 fig.text(0.0, -0.075,
-         "reaktive Umplanung, alle Personaldecken · Die Ungleichverteilung ist ein "
-         "Struktureffekt: Sie bleibt auch in den Instanzen bestehen,\nin denen S2 nicht "
-         "mehr Ausfalltage trägt als S1 (6 von 6). Der Stabilitätsunterschied ist dort "
-         "weitgehend ein Volumeneffekt.",
+         "Unter der Ausfallwelle hält die Optimierung die Spanne bei vollständiger "
+         "Neuplanung auf 16 Prozentpunkten — weniger als die Hälfte der reaktiven\n"
+         "Variante (38). Den Verteilungsvorteil verliert sie also nicht durch die Welle, "
+         "sondern durch die Vorgabe, den Plan möglichst unverändert zu lassen.",
          fontsize=9, color=MUTED)
 fig.tight_layout()
-save(fig, "05_ausfallstruktur.png")
+save(fig, "05_zielkonflikt.png")
 
-print("\nQuelle aller Werte: evaluation_results.csv (180 Pläne, 15 Instanzen)")
+print("\nQuelle aller Werte: evaluation_results.csv (270 Pläne, 15 Instanzen)")

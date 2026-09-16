@@ -1,13 +1,13 @@
 # Evaluation: regelbasierte Planung vs. MILP-Optimierung
 
 **Versuchsaufbau:** 15 Instanzen (5 Seeds × 3 Personaldecken) × 3 Ausfallszenarien ×
-4 Verfahrensvarianten = **180 Pläne**
+6 Verfahrensvarianten = **270 Pläne**
 **Station:** Innere Medizin / Kardiologie, 30 Betten, 28 Planungstage, 28 Tage Historie
 **Reproduktion:** `python campaign.py` (ca. 15 Min.), Auswertung `python campaign.py --report`
-**Rohdaten:** `evaluation_results.csv` (180 Zeilen, eine je Plan)
+**Rohdaten:** `evaluation_results.csv` (270 Zeilen, eine je Plan)
 
 Alle Zahlen sind **gemessene Ergebnisse des Prototyps**. Was daraus für den Business Impact
-folgt und was nicht, steht in Abschnitt 7.
+folgt und was nicht, steht in Abschnitt 8.
 
 ---
 
@@ -32,8 +32,10 @@ Bruttobedarfsrechnung (siehe `DATENKONZEPT.md`, Abschnitt 3.5); 0,80 bildet eine
 ab, die zwanzig Prozent unter ihrem rechnerischen Bedarf arbeitet — in der Pflege keine
 exotische Annahme.
 
-Verglichen werden vier Varianten: beide Verfahren jeweils als vollständige Neuplanung und
-als reaktive Umplanung (bestehender Plan als Ausgangspunkt).
+Verglichen werden sechs Varianten: beide Verfahren als vollständige Neuplanung, beide als
+reaktive Umplanung des **eigenen** Ausgangsplans, und beide als reaktive Umplanung des
+**fremden** Ausgangsplans. Die beiden letzten Varianten sind nötig, weil die Planstabilität
+zwischen den Verfahren sonst nicht vergleichbar ist — siehe Abschnitt 4.
 
 ---
 
@@ -50,8 +52,8 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | harte Regelverstöße | 0,07 ± 0,26 | 0,07 ± 0,26 | **0,00** | **0,00** |
 | weiche Abweichungen | 15,7 ± 1,8 | 16,1 ± 1,0 | **0,0 ± 0,0** | 0,9 ± 1,0 |
 | Streuung Auslastung | 0,069 ± 0,012 | 0,083 ± 0,017 | **0,014 ± 0,004** | 0,057 ± 0,039 |
-| Planstabilität | 72,6 % | 94,5 % | 48,5 % | **95,3 %** |
-| Planungszeit | 0,52 s | 0,43 s | 9,54 s | 0,30 s |
+| Planstabilität (eigener Ausgangsplan) | 72,6 % | 94,5 % | 48,5 % | 95,3 % |
+| Planungszeit | 0,41 s | 0,35 s | 8,79 s | 0,24 s |
 
 ### Knappe Besetzung (90 %, Ø 20 Köpfe)
 
@@ -62,8 +64,8 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | harte Regelverstöße | 0,33 ± 0,49 | 0,73 ± 0,70 | **0,00** | **0,00** |
 | weiche Abweichungen | 15,1 ± 1,4 | 14,9 ± 1,9 | **0,2 ± 0,4** | 1,7 ± 1,8 |
 | Streuung Auslastung | 0,059 ± 0,037 | 0,069 ± 0,038 | **0,017 ± 0,007** | 0,044 ± 0,024 |
-| Planstabilität | 78,3 % | 93,5 % | 49,9 % | **95,9 %** |
-| Planungszeit | 0,45 s | 0,38 s | 12,93 s | 0,40 s |
+| Planstabilität (eigener Ausgangsplan) | 78,3 % | 93,5 % | 49,5 % | 95,9 % |
+| Planungszeit | 0,36 s | 0,30 s | 12,33 s | 0,34 s |
 
 ### Unterbesetzt (80 %, Ø 18 Köpfe)
 
@@ -72,10 +74,10 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | Besetzungsquote | 95,4 % | 95,3 % | **100,0 %** | **100,0 %** |
 | Untergrenzenverstöße | 4,33 ± 1,95 | 4,60 ± 1,88 | **0,00** | **0,00** |
 | harte Regelverstöße | 0,93 ± 1,39 | 1,20 ± 1,52 | **0,00** | **0,00** |
-| weiche Abweichungen | 14,1 ± 1,8 | 14,3 ± 2,0 | **3,0 ± 1,4** | 4,9 ± 2,0 |
-| Streuung Auslastung | 0,088 ± 0,022 | 0,094 ± 0,021 | **0,065 ± 0,035** | 0,086 ± 0,035 |
-| Planstabilität | 78,8 % | 92,4 % | 51,4 % | **93,8 %** |
-| Planungszeit | 0,39 s | 0,33 s | 16,26 ± 10,43 s | 0,59 s |
+| weiche Abweichungen | 14,1 ± 1,8 | 14,3 ± 2,0 | **2,9 ± 1,2** | 4,8 ± 1,9 |
+| Streuung Auslastung | 0,088 ± 0,022 | 0,094 ± 0,021 | **0,065 ± 0,036** | 0,086 ± 0,035 |
+| Planstabilität (eigener Ausgangsplan) | 78,8 % | 92,4 % | 54,8 % | 93,9 % |
+| Planungszeit | 0,32 s | 0,27 s | 15,49 ± 10,54 s | 0,46 s |
 
 ### Anteil vollständig regelkonformer Pläne
 
@@ -88,9 +90,13 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | MILP | **100 %** | 100 % | 100 % |
 | MILP reaktiv | **100 %** | 100 % | 100 % |
 
-Über alle 90 MILP-Pläne hinweg gibt es **keinen einzigen** harten Regelverstoß, keine
+Über alle 135 MILP-Pläne hinweg gibt es **keinen einzigen** harten Regelverstoß, keine
 Untergrenzenunterschreitung und keinen unbesetzten Dienst. Die Heuristik lässt bei 80 %
 Decke insgesamt 104 Dienste unbesetzt und unterschreitet die Untergrenze 65-mal.
+
+Die Zeile „Planstabilität" ist in diesen Tabellen bewusst nicht fett ausgezeichnet: Sie
+misst jedes Verfahren gegen seinen **eigenen** Ausgangsplan und ist deshalb zwischen den
+Verfahren nicht vergleichbar. Abschnitt 4 holt das nach.
 
 ---
 
@@ -108,29 +114,62 @@ trägt S1 im Schnitt 15,7 und S2 17,8 Ausfalltage — ein Restunterschied von 13
 Instanz zwischen −3 und +7 Tagen schwankt. Dieser Rest ist groß genug, um Ergebnisse zu
 verfälschen, und wird in Abschnitt 3.3 ausdrücklich kontrolliert.
 
-| Kennzahl (reaktive Umplanung) | S0 | S1 | S2 |
+| Kennzahl | S0 | S1 | S2 |
 |---|---|---|---|
-| Spanne der Auslastung — Regelbasiert | 0,283 | 0,338 | **0,380** |
-| Spanne der Auslastung — MILP | **0,115** | 0,277 | **0,376** |
-| Planstabilität — Regelbasiert | 100 % | 90,7 % | 89,7 % |
-| Planstabilität — MILP | 100 % | 93,7 % | 91,2 % |
-| offene Dienste — Regelbasiert | 2,27 | 2,53 | **3,87** |
-| harte Regelverstöße — Regelbasiert | 0,33 | 0,47 | **1,20** |
+| Spanne — Regelbasiert, Neuplanung | 0,283 | 0,302 | 0,329 |
+| Spanne — MILP, Neuplanung | **0,122** | **0,140** | **0,163** |
+| Spanne — Regelbasiert, reaktiv | 0,283 | 0,338 | 0,380 |
+| Spanne — MILP, reaktiv | 0,122 | 0,275 | 0,377 |
+| offene Dienste — Regelbasiert, reaktiv | 2,27 | 2,53 | **3,87** |
+| harte Regelverstöße — Regelbasiert, reaktiv | 0,33 | 0,47 | **1,20** |
 
-### 3.2 Der belastbare Befund: der Verteilungsvorteil der Optimierung verschwindet
+Planstabilität fehlt in dieser Tabelle bewusst — sie gehört in Abschnitt 4, weil sie nur
+auf identischem Ausgangsplan zwischen den Verfahren aussagekräftig ist.
 
-Bei ungestörter Planung verteilt die Optimierung die Last dramatisch gleichmäßiger als die
-Heuristik: Spanne 0,115 gegen 0,283, ein Faktor von 2,5. Unter verteilten Einzelausfällen
-schrumpft der Vorsprung (0,277 gegen 0,338). **Unter der Ausfallwelle ist er vollständig
-verschwunden: 0,376 gegen 0,380 — kein Unterschied mehr.**
+### 3.2 Warum der Abstand bei der Spanne unter S2 klein wird
 
-Das ist das inhaltlich interessanteste Ergebnis der Kampagne, und es ist kein Mangel des
-Verfahrens. Gleichverteilung setzt Spielraum voraus: Es muss jemanden geben, der die
-Schicht übernehmen kann, ohne selbst an seine Grenze zu geraten. Fallen mehrere Personen
-gleichzeitig und mehrtägig aus, ist dieser Spielraum weg. Die Optimierung kann dann nur
-noch verteilen, was übrig ist — und das ist dieselbe knappe Menge, die auch die Heuristik
-vorfindet. Der Mehrwert der Optimierung liegt hier weiterhin in der **Regelkonformität**
-(null Verstöße gegen 1,20), nicht mehr in der **Verteilungsgerechtigkeit**.
+In der reaktiven Betriebsart liegen beide Verfahren unter der Ausfallwelle bei der
+Lastverteilung dicht beieinander: Spanne 0,377 gegen 0,380. Das ist erklärungsbedürftig,
+weil die Optimierung ohne Störung um den Faktor 2,3 besser verteilt (0,122 gegen 0,283).
+Drei Befunde ordnen das ein.
+
+**Erstens: Die Optimierung verliert den Verteilungsvorteil nicht durch die Welle.** Bei
+vollständiger Neuplanung hält sie die Spanne auch unter S2 auf 0,163 — gegenüber 0,329 bei
+der Heuristik in derselben Betriebsart. Die Welle verschlechtert die Verteilung der
+Optimierung nur moderat (0,122 → 0,140 → 0,163). Was den Vorteil aufzehrt, ist die
+**reaktive Betriebsart selbst**: 0,163 → 0,377. Die Ursache steht in der Zielfunktion. Das
+Gewicht für „Zuweisung beibehalten" beträgt 200, das für Lastausgleich 0,02. Wer dem Modell
+sagt, es solle den Plan möglichst nicht anfassen, bekommt genau das: Lückenfüllen statt
+Umverteilen — und damit dasselbe Verhalten wie die Heuristik. **Der schmale Abstand ist
+eine Gewichtungsentscheidung, keine Grenze des Verfahrens.**
+
+**Zweitens: Die gleiche Spanne bedeutet nicht die gleiche Leistung.** Die Heuristik erreicht
+ihre Werte teilweise dadurch, dass sie Dienste **gar nicht besetzt**. Ein unbesetzter Dienst
+erzeugt keine Auslastung, drückt die Spanne also nicht nach oben, und er erzeugt auch keine
+Planänderung, hebt die Stabilität also künstlich. Unter S2 lässt die Heuristik im Mittel
+3,87 Dienste offen (bei 80 % Decke sogar 9,4), die Optimierung keinen einzigen. Die mittlere
+Auslastung liegt bei der Optimierung entsprechend höher: 98,6 % gegen 96,3 %. **Die
+Optimierung verteilt also mehr Arbeit auf dieselbe Mannschaft und erreicht dabei dieselbe
+Spanne.** Bei gleicher Besetzung wäre der Vergleich nicht ausgeglichen, sondern deutlich
+zugunsten der Optimierung verschoben.
+
+**Drittens: Der Unterschied verschwindet nicht, er verlagert sich.** Unter S2 stehen sich
+gegenüber (beide reaktiv, jeweils auf dem Plan der Optimierung):
+
+| Kennzahl unter S2 | Regelbasiert | MILP |
+|---|---|---|
+| Besetzungsquote | 99,3 % | **100,0 %** |
+| offene Dienste je Plan | 1,40 | **0,00** |
+| harte Regelverstöße je Plan | 0,53 | **0,00** |
+| weiche Abweichungen je Plan | 5,87 | **3,27** |
+| Spanne der Auslastung | 0,382 | 0,377 |
+| Planstabilität | 87,3 % | **91,3 %** |
+| geänderte Zuweisungen | 39,1 | **26,2** |
+
+Auf der einen Kennzahl, die dicht beieinanderliegt, ist die Optimierung nicht schlechter.
+Auf allen übrigen ist der Abstand eindeutig. Unter der Ausfallwelle liegt ihr Mehrwert in
+**Versorgungssicherheit, Rechtskonformität und Planstabilität**, nicht mehr in der
+Verteilungsgerechtigkeit — solange man ihr Stabilität als vorrangiges Ziel vorgibt.
 
 ### 3.3 Kontrolle für das Ausfallvolumen — und eine Korrektur
 
@@ -140,8 +179,8 @@ Szenariodifferenz zusätzlich auf der Teilmenge der **6 Instanzen** geprüft, in
 
 | Differenz S2 − S1 (MILP reaktiv) | alle 15 Instanzen | volumenkontrolliert (6) |
 |---|---|---|
-| Spanne der Auslastung | +0,100 (13 von 15) | **+0,084 (6 von 6)** |
-| Planstabilität | −2,55 Pp. (12 von 15) | −0,79 Pp. (4 von 6) |
+| Spanne der Auslastung | +0,102 (13 von 15) | **+0,084 (6 von 6)** |
+| Planstabilität | −2,5 Pp. (12 von 15) | −0,8 Pp. (4 von 6) |
 
 **Der Verteilungseffekt ist ein echter Struktureffekt.** Er bleibt in der volumen­kontrollierten
 Teilmenge nahezu unverändert bestehen und tritt dort in **allen sechs** Instanzen auf.
@@ -178,7 +217,76 @@ Szenarien).
 
 ---
 
-## 4. Was die Kampagne beantwortet
+## 4. Der faire Stabilitätsvergleich
+
+### 4.1 Warum die naheliegende Messung in die Irre führt
+
+Planstabilität ist der Anteil der Zuweisungen, die gegenüber einem Ausgangsplan bestehen
+bleiben. Wird jedes Verfahren gegen **seinen eigenen** Ausgangsplan gemessen — so lief die
+erste Auswertung —, vergleicht man zwei unterschiedliche Aufgaben. Denn die Ausgangspläne
+sind sehr unterschiedlich gut:
+
+| Ausgangsplan (Szenario S0) | weiche Abweichungen | Spanne | offene Dienste |
+|---|---|---|---|
+| der Heuristik | 15,3 | 0,283 | 2,27 |
+| der Optimierung | **1,1** | **0,122** | **0,00** |
+
+Einen schwachen Plan unverändert zu lassen ist billig — es gibt nichts zu verteidigen. Einen
+guten Plan unter Störung gut zu halten kostet Änderungen. Die Messung belohnt also das
+Verfahren mit dem schlechteren Ausgangsplan. In der ausgelieferten Beispielinstanz führte
+das dazu, dass die Heuristik unter S2 mit 93,0 % **stabiler** aussah als die Optimierung mit
+90,7 % — obwohl der Plan der Optimierung in jeder Qualitätsdimension besser war.
+
+Die Kampagne lässt deshalb jedes Verfahren zusätzlich den **fremden** Ausgangsplan
+reparieren. Erst dann ist die Aufgabe identisch.
+
+### 4.2 Beide Verfahren reparieren denselben Plan
+
+**Ausgangsplan der Optimierung** (der realistische Fall: der Plan stammt aus dem System):
+
+| Kennzahl | Regelbasiert repariert | MILP repariert |
+|---|---|---|
+| Planstabilität | 91,8 % | **95,0 %** |
+| geänderte Zuweisungen | 24,8 | **14,9** |
+| weiche Abweichungen | 5,07 | **2,47** |
+| harte Regelverstöße | 0,22 | **0,00** |
+| offene Dienste | 0,73 | **0,00** |
+| vollständig regelkonforme Pläne (80 % Decke) | 47 % | **100 %** |
+
+**Ausgangsplan der Heuristik** (der Plan stammt aus der bisherigen Excel-Planung):
+
+| Kennzahl | Regelbasiert repariert | MILP repariert |
+|---|---|---|
+| Planstabilität | **93,5 %** | 91,7 % |
+| geänderte Zuweisungen | **19,5** | 25,2 |
+| weiche Abweichungen | 15,1 | 14,9 |
+| harte Regelverstöße | 0,67 | **0,00** |
+| offene Dienste | 2,89 | **0,00** |
+
+**Auf dem Plan der Optimierung gewinnt die Optimierung in jeder Kennzahl** — sie braucht
+nur 15 statt 25 Änderungen und hält dabei die Qualität. Unter der Ausfallwelle ist sie in
+**14 von 15 Instanzen** stabiler (91,3 % gegen 87,3 %) und auf jeder Personaldecke.
+
+**Auf dem Plan der Heuristik ändert die Optimierung mehr** (25,2 gegen 19,5). Das ist kein
+Nachteil, sondern der Preis der Reparatur: Sie beseitigt dabei alle 0,67 harten
+Regelverstöße und alle 2,89 unbesetzten Dienste, die die Heuristik im Plan stehen lässt.
+Wer einen schlechten Plan erbt, muss ihn anfassen, um ihn rechtskonform zu machen.
+
+### 4.3 Was daraus folgt
+
+Die Aussage „die Optimierung ist stabiler" ist **nur mit Angabe des Ausgangsplans**
+belastbar. Sauber formuliert:
+
+1. Repariert die Optimierung ihre eigenen Pläne, ist sie der Heuristik in **allen**
+   Kennzahlen überlegen, Planstabilität eingeschlossen.
+2. Repariert sie einen fremden, schwachen Plan, ändert sie mehr — weil sie dessen Mängel
+   mitbehebt. Wer nur die Stabilitätszahl liest, hält das für einen Nachteil.
+3. Jede Stabilitätsangabe ohne Nennung des Ausgangsplans ist nicht interpretierbar. Das
+   gilt für unsere eigene erste Auswertung, die diesen Fehler enthielt.
+
+---
+
+## 5. Was die Kampagne beantwortet
 
 **Der Gleichstand aus der Einzelmessung war instanzabhängig.** Bei bedarfsgerechter
 Besetzung erreichen beide Verfahren nahezu die Sollbesetzung. Sobald die Personaldecke
@@ -192,38 +300,45 @@ Greedy-Plan bei 80 % war vollständig regelkonform, 100 % der MILP-Pläne waren 
 das betriebswirtschaftlich relevanteste Ergebnis: Der Mehrwert der Optimierung entsteht
 nicht im Normalbetrieb, sondern genau dort, wo es eng wird.
 
-**Die Verteilungswirkung ist im Normalbetrieb groß und unter Störung fragil.** Bei
+**Die Verteilungswirkung ist groß — solange Stabilität nicht vorrangig ist.** Bei
 bedarfsgerechter Besetzung sinkt die Streuung der individuellen Auslastung von 0,069 auf
 0,014, die Spanne zwischen der am geringsten und der am stärksten ausgelasteten Person von
 33 auf 7 Prozentpunkte, und alle 15,7 Überschreitungen der Wochenend- und
-Nachtdienst-Richtwerte entfallen. Unter der Ausfallwelle ist dieser Vorsprung aufgezehrt
-(Abschnitt 3.2).
+Nachtdienst-Richtwerte entfallen. In der reaktiven Betriebsart gibt die Optimierung diesen
+Vorsprung weitgehend auf, weil die Zielfunktion sie dazu anhält (Abschnitt 3.2).
 
 **Die reaktive Umplanung ist der größte Einzeleffekt.** Eine vollständige Neuplanung nach
-Ausfällen erhält nur rund die Hälfte des Plans (MILP 48,5–51,4 %, Greedy 72,6–78,8 %) und
-ändert im Mittel 277 Zuweisungen. Die reaktive Variante hält 93,8–95,9 % Planstabilität bei
-Ø 23 Änderungen und rechnet in 0,20 s im Median (Maximum 3,08 s), bei unveränderter
-Besetzungsquote und ohne zusätzliche Regelverstöße. Für die Mitarbeitenden ist das der
-Unterschied zwischen „einige Dienste ändern sich" und „der Monat wird neu gemacht".
+Ausfällen erhält nur rund die Hälfte des Plans (MILP 48,5–54,8 %) und ändert im Mittel 277
+Zuweisungen. Die reaktive Variante hält 93,9–95,9 % Planstabilität bei Ø 15 Änderungen und
+rechnet in 0,16 s im Median (Maximum 2,89 s), bei unveränderter Besetzungsquote und ohne
+zusätzliche Regelverstöße. Für die Mitarbeitenden ist das der Unterschied zwischen „einige
+Dienste ändern sich" und „der Monat wird neu gemacht". Dieser Vergleich ist innerhalb eines
+Verfahrens gezogen und deshalb vom Problem aus Abschnitt 4 nicht betroffen.
 
 **Der Preis der Stabilität ist messbar.** Die reaktive Variante erkauft sich die
 Planstabilität mit schlechterer Lastverteilung (Streuung 0,057 statt 0,014 bei 100 %
 Decke) und einzelnen weichen Abweichungen (0,9 statt 0,0). Das ist kein Mangel, sondern
 der Zielkonflikt selbst — der Prototyp macht ihn quantifizierbar, statt ihn zu verstecken.
 
-**Rechenzeit ist kein limitierender Faktor.** Die Optimierung braucht 9,5 s bei
-bedarfsgerechter und 16,3 s bei knapper Besetzung; in 8 von 90 Läufen (9 %) griff das
+**Rechenzeit ist kein limitierender Faktor.** Die Optimierung braucht 8,8 s bei
+bedarfsgerechter und 15,5 s bei knapper Besetzung; in 7 von 135 Läufen (5 %) griff das
 Zeitlimit von 30 s, ohne dass die Ergebnisqualität erkennbar litt — auch diese Pläne sind
-vollständig regelkonform. Die Umplanung liegt im Median unter einer Viertelsekunde.
+vollständig regelkonform. Die Umplanung liegt im Median bei 0,16 s.
 
 ---
 
-## 5. Was die Kampagne **nicht** beantwortet
+## 6. Was die Kampagne **nicht** beantwortet
 
 **Volumen und Struktur der Ausfälle sind nicht vollständig entkoppelt.** Der Restunterschied
 von 13,6 % im Ausfallvolumen zwischen S1 und S2 erlaubt es nicht, den Stabilitätsunterschied
 der Struktur zuzuschreiben (Abschnitt 3.3). Für den Verteilungseffekt reicht die Kontrolle;
 für den Stabilitätseffekt nicht.
+
+**Planstabilität ist keine verfahrensneutrale Kennzahl.** Sie hängt von der Qualität des
+Ausgangsplans ab (Abschnitt 4). Jede Zahl in dieser Arbeit nennt deshalb den Ausgangsplan
+mit. Für den Vergleich mit einer real bestehenden Excel-Planung wäre der Plan der Heuristik
+der richtige Ausgangspunkt, für die Bewertung eines eingeführten Systems der Plan der
+Optimierung — die beiden Fälle führen zu unterschiedlichen Aussagen, und beide stehen oben.
 
 **Die Heuristik ist keine echte Excel-Planung.** Sie ist eine programmierte Regelheuristik:
 konsistenter, schneller und ermüdungsfrei. Der Unterschied zu manueller Planung dürfte
@@ -249,7 +364,7 @@ bleibt gültig.
 
 ---
 
-## 6. Methodenwahl
+## 7. Methodenwahl
 
 Machine Learning wurde geprüft und verworfen: Es gibt keine zu lernende Zielvariable und
 keine historischen Planentscheidungen als Trainingsdaten. Das Problem ist eine Zuordnung
@@ -269,7 +384,7 @@ bewertet.** Ein Verfahren darf seine eigene Regelkonformität nicht selbst behau
 
 ---
 
-## 7. Business Impact
+## 8. Business Impact
 
 **Gemessen** (gilt für diese 15 Instanzen):
 
@@ -278,13 +393,17 @@ bewertet.** Ein Verfahren darf seine eigene Regelkonformität nicht selbst behau
   0 % vollständig regelkonforme Pläne.
 - Gleichmäßigere Belastung im Normalbetrieb: Streuung der Auslastung um Faktor 5 geringer,
   Spanne von 33 auf 7 Prozentpunkte, alle Wochenend- und Nachtdienst-Richtwerte eingehalten.
-- Reaktion auf Ausfälle: 94–96 % Planstabilität statt 49–79 %, Ø 23 statt 277 geänderte
-  Zuweisungen, Umplanung im Median unter einer Viertelsekunde.
+- Reaktion auf Ausfälle: Auf demselben Ausgangsplan hält die Optimierung 95,0 %
+  Planstabilität gegen 91,8 % der Heuristik und braucht dafür 14,9 statt 24,8 Änderungen —
+  bei null Regelverstößen und null unbesetzten Diensten gegen 0,22 und 0,73. Die Umplanung
+  läuft im Median in 0,16 s.
 
-**Gemessen, aber gegenläufig:** Unter einer gebündelten Ausfallwelle verschwindet der
-Verteilungsvorteil der Optimierung vollständig (Spanne 0,376 gegen 0,380). Die
-Regelkonformität bleibt erhalten, die Verteilungsgerechtigkeit nicht. Eine Einführung darf
-also nicht mit gleichmäßigerer Belastung *in der Krise* beworben werden.
+**Gemessen, aber mit Zielkonflikt:** In der reaktiven Betriebsart liegt die Spanne der
+Optimierung unter der Ausfallwelle gleichauf mit der Heuristik (0,376 gegen 0,380) — nicht
+weil die Welle den Spielraum nähme, sondern weil die Vorgabe „möglichst wenig ändern" das
+Umverteilen unterbindet. Bei vollständiger Neuplanung hält die Optimierung auch unter der
+Welle 0,164. Gleichmäßigere Belastung *und* maximale Planstabilität sind nicht gleichzeitig
+zu haben; welches Ziel schwerer wiegt, ist eine Managemententscheidung.
 
 **Nicht gemessen, nur plausibel** — in der Hausarbeit als Schätzung zu kennzeichnen:
 Reduktion des manuellen Planungsaufwands, Wirkung gleichmäßigerer Belastung auf
@@ -303,14 +422,16 @@ bedeutet für die betroffene Person eine Umstellung privater Planung. Ein Verfah
 gleicher Versorgungsqualität mit einem Bruchteil der Änderungen auskommt, adressiert genau
 den Punkt, den die reine Besetzungsquote nicht sichtbar macht.
 
-**Optimierung ersetzt kein Personal.** Der Verteilungsvorteil setzt Spielraum voraus. Ist
-der Spielraum weg, sichert die Optimierung noch die Regelkonformität, aber nicht mehr die
-Gerechtigkeit der Verteilung. Wer eine Planungssoftware als Antwort auf strukturelle
-Unterbesetzung einführt, kauft Rechtssicherheit — keine Entlastung der Mitarbeitenden.
+**Die Gewichtung der Ziele ist eine Führungsentscheidung, keine technische.** Ob ein
+Ausfall durch minimales Lückenfüllen oder durch Umverteilen im ganzen Monat aufgefangen
+wird, entscheidet nicht das Verfahren, sondern das Gewicht in der Zielfunktion. Beides ist
+vertretbar: Stabilität schützt die private Planung der Mitarbeitenden, Umverteilung schützt
+die Gleichverteilung der Last. Der Prototyp macht den Preis beider Optionen sichtbar —
+diese Abwägung gehört auf die Leitungsebene, nicht in die Konfigurationsdatei.
 
 ---
 
-## 8. Einordnung in die Leitfrage
+## 9. Einordnung in die Leitfrage
 
 „Wie kann eine KI-gestützte Planungsempfehlung die Erstellung und kurzfristige Anpassung
 eines Schichtplans gegenüber einer regelbasierten Excel-Planung unterstützen?"
@@ -323,14 +444,16 @@ Nach dieser Kampagne lässt sich die Antwort präzisieren:
 2. **Bei der kurzfristigen Anpassung** liegt der Mehrwert in der Planstabilität — und zwar
    nur, wenn Stabilität ausdrücklich als Ziel modelliert wird. Eine bloße Neuoptimierung
    nach dem Ausfall ist für die Mitarbeitenden schlechter als die Heuristik.
-3. **Die Unterstützung hat eine Grenze.** Unter einer gebündelten Ausfallwelle bleibt die
-   Regelkonformität erhalten, der Verteilungsvorteil nicht. Optimierung nutzt vorhandenen
-   Spielraum besser aus; sie erzeugt keinen.
+3. **Die beiden Ziele schließen einander teilweise aus.** Unter einer gebündelten
+   Ausfallwelle erreicht die Optimierung entweder eine gleichmäßige Last (Spanne 0,164 bei
+   vollständiger Neuplanung) oder einen stabilen Plan (91 % unveränderte Dienste), nicht
+   beides zugleich. Die Regelkonformität bleibt in jedem Fall erhalten.
 
 Punkt 2 ist der methodische Kernbefund der Arbeit: Nicht „Optimierung schlägt Heuristik",
 sondern „Optimierung schlägt Heuristik dann, wenn die richtigen Ziele im Modell stehen".
-Punkt 3 ist der betriebswirtschaftliche: Sie schlägt die Heuristik nicht in jeder Dimension
-und nicht in jeder Lage.
+Punkt 3 ist der betriebswirtschaftliche: Der Prototyp liefert keine überlegene Lösung auf
+allen Kennzahlen gleichzeitig, sondern macht einen Zielkonflikt entscheidbar, der in der
+Excel-Planung unsichtbar bleibt.
 
 ---
 

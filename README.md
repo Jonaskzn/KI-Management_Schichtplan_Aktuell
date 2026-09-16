@@ -13,12 +13,12 @@ test_planner.py             Smoke- und Regeltests für die Planungslogik
 generate_dataset.py         Generator für den Datensatz (Seed 20261133)
 validate_dataset.py         Prüfskript für den Datensatz
 campaign.py                 Evaluationskampagne über mehrere Instanzen
-evaluation_results.csv      Rohergebnisse der Kampagne (180 Pläne)
+evaluation_results.csv      Rohergebnisse der Kampagne (270 Pläne)
 ERGEBNISSE.md               Evaluation: Aufbau, Ergebnisse, Limitationen
 make_charts.py              Abbildungen aus den Kampagnendaten
 make_gantt.py               Gantt-Diagramm des Projektverlaufs (Termine anpassen!)
 make_deck.js                Präsentationsfolien (pptxgenjs)
-abbildungen/                erzeugte PNGs für Bericht und Präsentation
+abbildungen/                erzeugte PNGs für Bericht und Präsentation (5 Abbildungen)
 HANDOUT.md                  zweiseitiges Handout für die Kommiliton:innen
 DATENKONZEPT.md             Begründung jeder Spalte und jedes Parameters mit Quellen
 ```
@@ -80,7 +80,7 @@ Van den Bergh et al. 2013).
 ```bash
 python test_planner.py       # Planungslogik gegen den Datensatz
 python validate_dataset.py   # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
-python campaign.py           # Evaluationskampagne, 15 Instanzen (~14 Min.)
+python campaign.py           # Evaluationskampagne, 15 Instanzen (~15 Min.)
 python campaign.py --report  # aggregierte Auswertung der Kampagne
 ```
 
