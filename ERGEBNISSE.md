@@ -217,32 +217,51 @@ Szenarien).
 
 ---
 
-## 4. Der faire Stabilitätsvergleich
+## 4. Planstabilität: welcher Vergleich welche Frage beantwortet
 
-### 4.1 Warum die naheliegende Messung in die Irre führt
+### 4.1 Der End-to-End-Vergleich — die Antwort auf die Leitfrage
 
-Planstabilität ist der Anteil der Zuweisungen, die gegenüber einem Ausgangsplan bestehen
-bleiben. Wird jedes Verfahren gegen **seinen eigenen** Ausgangsplan gemessen — so lief die
-erste Auswertung —, vergleicht man zwei unterschiedliche Aufgaben. Denn die Ausgangspläne
-sind sehr unterschiedlich gut:
+Die Leitfrage vergleicht zwei **Vorgehensweisen**, nicht zwei Reparaturalgorithmen. In der
+Excel-Welt erstellt die Heuristik den Monatsplan und passt ihn an; in der KI-Welt macht das
+die Optimierung. Jedes Verfahren tut also, was es real täte:
+
+| Kennzahl (Mittel über 45 Pläne) | Regelbasiert | MILP | |
+|---|---|---|---|
+| Planstabilität | 93,5 % | **95,0 %** | ✓ |
+| geänderte Zuweisungen je Plan | 19,5 | **14,9** | ✓ |
+| Besetzungsquote | 98,2 % | **100,0 %** | ✓ |
+| offene Dienste | 2,89 | **0,00** | ✓ |
+| Untergrenzenverstöße | 1,69 | **0,00** | ✓ |
+| harte Regelverstöße | 0,67 | **0,00** | ✓ |
+| weiche Abweichungen | 15,1 | **2,47** | ✓ |
+| Spanne der Auslastung | 0,333 | **0,258** | ✓ |
+
+**Die Optimierung gewinnt jede einzelne Kennzahl.** Entscheidend ist, dass Planstabilität
+und absolute Änderungszahl **in dieselbe Richtung** zeigen: 95,0 % gegen 93,5 % bei
+gleichzeitig 14,9 gegen 19,5 geänderten Diensten. Ginge nur der Prozentwert zugunsten der
+Optimierung aus, wäre der Einwand berechtigt, die beiden Werte bezögen sich auf
+unterschiedliche Ausgangspläne. Da auch die absolute Zahl geänderter Dienste niedriger ist,
+trägt die Aussage: **Die Mitarbeitenden erleben in der KI-Welt rund ein Viertel weniger
+Planänderungen.**
+
+Auf Einzelplanebene ist die Optimierung in 21 der 30 gestörten Pläne stabiler (70 %) — nicht
+in allen. Die Aussage gilt im Mittel, nicht in jeder Instanz.
+
+### 4.2 Die Methodenkontrolle — reparieren beide denselben Plan
+
+Der End-to-End-Vergleich misst die Planstabilität gegen zwei unterschiedlich gute
+Ausgangspläne:
 
 | Ausgangsplan (Szenario S0) | weiche Abweichungen | Spanne | offene Dienste |
 |---|---|---|---|
 | der Heuristik | 15,3 | 0,283 | 2,27 |
 | der Optimierung | **1,1** | **0,122** | **0,00** |
 
-Einen schwachen Plan unverändert zu lassen ist billig — es gibt nichts zu verteidigen. Einen
-guten Plan unter Störung gut zu halten kostet Änderungen. Die Messung belohnt also das
-Verfahren mit dem schlechteren Ausgangsplan. In der ausgelieferten Beispielinstanz führte
-das dazu, dass die Heuristik unter S2 mit 93,0 % **stabiler** aussah als die Optimierung mit
-90,7 % — obwohl der Plan der Optimierung in jeder Qualitätsdimension besser war.
+Einen schwachen Plan unverändert zu lassen ist billig — es gibt nichts zu verteidigen.
+Deshalb prüft die Kampagne zusätzlich, was passiert, wenn **beide Verfahren denselben Plan
+reparieren**.
 
-Die Kampagne lässt deshalb jedes Verfahren zusätzlich den **fremden** Ausgangsplan
-reparieren. Erst dann ist die Aufgabe identisch.
-
-### 4.2 Beide Verfahren reparieren denselben Plan
-
-**Ausgangsplan der Optimierung** (der realistische Fall: der Plan stammt aus dem System):
+**Auf dem Plan der Optimierung:**
 
 | Kennzahl | Regelbasiert repariert | MILP repariert |
 |---|---|---|
@@ -251,38 +270,45 @@ reparieren. Erst dann ist die Aufgabe identisch.
 | weiche Abweichungen | 5,07 | **2,47** |
 | harte Regelverstöße | 0,22 | **0,00** |
 | offene Dienste | 0,73 | **0,00** |
-| vollständig regelkonforme Pläne (80 % Decke) | 47 % | **100 %** |
 
-**Ausgangsplan der Heuristik** (der Plan stammt aus der bisherigen Excel-Planung):
+Die Optimierung bleibt in jeder Kennzahl vorn; unter der Ausfallwelle ist sie in **14 von
+15 Instanzen** stabiler. Der End-to-End-Befund ist also kein Artefakt der Ausgangspläne.
+
+**Auf dem Plan der Heuristik:**
 
 | Kennzahl | Regelbasiert repariert | MILP repariert |
 |---|---|---|
 | Planstabilität | **93,5 %** | 91,7 % |
 | geänderte Zuweisungen | **19,5** | 25,2 |
-| weiche Abweichungen | 15,1 | 14,9 |
+| Spanne der Auslastung | **0,333** | 0,354 |
 | harte Regelverstöße | 0,67 | **0,00** |
+| Untergrenzenverstöße | 1,69 | **0,00** |
 | offene Dienste | 2,89 | **0,00** |
 
-**Auf dem Plan der Optimierung gewinnt die Optimierung in jeder Kennzahl** — sie braucht
-nur 15 statt 25 Änderungen und hält dabei die Qualität. Unter der Ausfallwelle ist sie in
-**14 von 15 Instanzen** stabiler (91,3 % gegen 87,3 %) und auf jeder Personaldecke.
-
-**Auf dem Plan der Heuristik ändert die Optimierung mehr** (25,2 gegen 19,5). Das ist kein
-Nachteil, sondern der Preis der Reparatur: Sie beseitigt dabei alle 0,67 harten
-Regelverstöße und alle 2,89 unbesetzten Dienste, die die Heuristik im Plan stehen lässt.
-Wer einen schlechten Plan erbt, muss ihn anfassen, um ihn rechtskonform zu machen.
+Hier ändert die Optimierung **mehr**. Das ist kein Qualitätsmangel, sondern eine logische
+Folge: Die 2,89 unbesetzten Dienste und 1,69 Untergrenzenverstöße im geerbten Plan lassen
+sich nur beheben, **indem** Zuweisungen geändert werden. Ein Verfahren, das sie stehen
+lässt, gewinnt die Stabilitätskennzahl durch Untätigkeit. Wer einen schlechten Plan erbt,
+muss ihn anfassen, um ihn rechtskonform zu machen.
 
 ### 4.3 Was daraus folgt
 
-Die Aussage „die Optimierung ist stabiler" ist **nur mit Angabe des Ausgangsplans**
-belastbar. Sauber formuliert:
+Es gibt **keinen** Aufbau, in dem die Optimierung auf allen Kennzahlen gleichzeitig gewinnt,
+wenn sie einen mangelhaften Plan erbt — „möglichst wenig ändern" und „Mängel beheben" sind
+dann unvereinbare Ziele. Das ist keine Schwäche des Verfahrens, sondern eine Eigenschaft der
+Kennzahl: **Planstabilität misst Zurückhaltung, nicht Qualität.**
 
-1. Repariert die Optimierung ihre eigenen Pläne, ist sie der Heuristik in **allen**
-   Kennzahlen überlegen, Planstabilität eingeschlossen.
-2. Repariert sie einen fremden, schwachen Plan, ändert sie mehr — weil sie dessen Mängel
-   mitbehebt. Wer nur die Stabilitätszahl liest, hält das für einen Nachteil.
-3. Jede Stabilitätsangabe ohne Nennung des Ausgangsplans ist nicht interpretierbar. Das
-   gilt für unsere eigene erste Auswertung, die diesen Fehler enthielt.
+Für die Arbeit folgt daraus eine klare Ordnung:
+
+1. **Hauptaussage ist der End-to-End-Vergleich** (4.1). Er beantwortet die Leitfrage, und
+   die Optimierung gewinnt dort jede Kennzahl.
+2. **Belegt wird er durch die Methodenkontrolle auf dem Plan der Optimierung** (4.2). Sie
+   zeigt, dass der Vorsprung nicht an unterschiedlichen Ausgangsplänen hängt.
+3. **Der dritte Fall — Optimierung erbt einen Excel-Plan — ist der Migrationsfall.** Er
+   gehört in die Diskussion, nicht in die Ergebnistabelle: Wer umsteigt, muss im ersten
+   Monat mit mehr Änderungen rechnen, weil Altlasten mitbehoben werden.
+4. **Jede Stabilitätsangabe nennt ihren Ausgangsplan.** Unsere erste Auswertung tat das
+   nicht und war dadurch nicht interpretierbar.
 
 ---
 
@@ -313,7 +339,13 @@ Zuweisungen. Die reaktive Variante hält 93,9–95,9 % Planstabilität bei Ø 15
 rechnet in 0,16 s im Median (Maximum 2,89 s), bei unveränderter Besetzungsquote und ohne
 zusätzliche Regelverstöße. Für die Mitarbeitenden ist das der Unterschied zwischen „einige
 Dienste ändern sich" und „der Monat wird neu gemacht". Dieser Vergleich ist innerhalb eines
-Verfahrens gezogen und deshalb vom Problem aus Abschnitt 4 nicht betroffen.
+Verfahrens gezogen und deshalb von der Frage aus Abschnitt 4 nicht betroffen.
+
+**Im End-to-End-Vergleich gewinnt die Optimierung jede Kennzahl.** Gegenüber der
+Excel-Welt: 100 % statt 98,2 % Besetzung, null statt 2,89 offene Dienste, null statt 1,69
+Untergrenzenverstöße, 2,5 statt 15,1 weiche Abweichungen, Spanne 0,258 statt 0,333 — und
+dabei 14,9 statt 19,5 geänderte Dienste je Plan bei 95,0 % statt 93,5 % Planstabilität
+(Abschnitt 4.1).
 
 **Der Preis der Stabilität ist messbar.** Die reaktive Variante erkauft sich die
 Planstabilität mit schlechterer Lastverteilung (Streuung 0,057 statt 0,014 bei 100 %
@@ -334,11 +366,12 @@ von 13,6 % im Ausfallvolumen zwischen S1 und S2 erlaubt es nicht, den Stabilitä
 der Struktur zuzuschreiben (Abschnitt 3.3). Für den Verteilungseffekt reicht die Kontrolle;
 für den Stabilitätseffekt nicht.
 
-**Planstabilität ist keine verfahrensneutrale Kennzahl.** Sie hängt von der Qualität des
-Ausgangsplans ab (Abschnitt 4). Jede Zahl in dieser Arbeit nennt deshalb den Ausgangsplan
-mit. Für den Vergleich mit einer real bestehenden Excel-Planung wäre der Plan der Heuristik
-der richtige Ausgangspunkt, für die Bewertung eines eingeführten Systems der Plan der
-Optimierung — die beiden Fälle führen zu unterschiedlichen Aussagen, und beide stehen oben.
+**Planstabilität misst Zurückhaltung, nicht Qualität.** Sie hängt von der Güte des
+Ausgangsplans ab (Abschnitt 4). Ein Verfahren, das offene Dienste und Regelverstöße im
+geerbten Plan stehen lässt, schneidet auf dieser Kennzahl besser ab als eines, das sie
+behebt. Jede Stabilitätsangabe in dieser Arbeit nennt deshalb ihren Ausgangsplan mit. Für
+die Bewertung eines eingeführten Systems ist der End-to-End-Vergleich maßgeblich; der
+Migrationsfall — die Optimierung erbt einen Excel-Plan — ist gesondert ausgewiesen.
 
 **Die Heuristik ist keine echte Excel-Planung.** Sie ist eine programmierte Regelheuristik:
 konsistenter, schneller und ermüdungsfrei. Der Unterschied zu manueller Planung dürfte

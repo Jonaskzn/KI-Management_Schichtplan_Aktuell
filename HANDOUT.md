@@ -84,14 +84,14 @@ Gewicht 200 für „nicht ändern" gegen 0,02 für Lastausgleich. Dann füllt si
 Lücken. Gleichmäßige Last **oder** stabiler Plan — unter Druck ist beides zugleich nicht
 zu haben, und welches Ziel gewinnt, ist eine Führungsentscheidung.
 
-**7. Unsere wichtigste Kennzahl war zunächst falsch gemessen.**
-Wir hatten die Planstabilität jedes Verfahrens gegen **seinen eigenen** Ausgangsplan
-gemessen. Der Plan der Heuristik ist aber deutlich schlechter (15,3 gegen 1,1 weiche
-Regelverstöße) — und einen schwachen Plan unverändert zu lassen ist billig, weil es nichts
-zu verteidigen gibt. Die Messung belohnte also den schlechteren Planer. Lassen wir **beide
-Verfahren denselben Plan reparieren**, dreht sich das Ergebnis: 95,0 % gegen 91,8 %
-Stabilität bei 15 statt 25 Änderungen. Eine Kennzahl, deren Bezugspunkt man nicht mitnennt,
-ist nicht interpretierbar.
+**7. Planstabilität misst Zurückhaltung, nicht Qualität.**
+Als Prozentwert hängt sie davon ab, wie gut der Ausgangsplan war — einen schwachen Plan
+unverändert zu lassen ist billig, weil es nichts zu verteidigen gibt. Ein Verfahren, das
+offene Dienste und Regelverstöße einfach stehen lässt, gewinnt diese Kennzahl durch
+Untätigkeit. Wir berichten sie deshalb nie allein, sondern immer mit der **absoluten Zahl
+geänderter Dienste** — und haben zusätzlich beide Verfahren denselben Plan reparieren
+lassen. In beiden Prüfungen bleibt die Optimierung vorn (95,0 % gegen 91,8 %). Eine
+Kennzahl, deren Bezugspunkt man nicht mitnennt, ist nicht interpretierbar.
 
 **8. Einen Effekt messen heißt, die Alternativerklärung ausschließen.**
 Die Ausfallwelle sah zunächst auch instabiler aus als verteilte Einzelausfälle. Als wir nur
@@ -129,8 +129,8 @@ einer Viertelsekunde für eine Umplanung.
 
 **Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,3
 Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 33 auf 7
-Prozentpunkte), Planstabilität nach Ausfällen auf identischem Ausgangsplan (95,0 % gegen
-91,8 %), der Zielkonflikt zwischen Lastverteilung und Stabilität, Rechenzeit.
+Prozentpunkte), Planstabilität nach Ausfällen (95,0 % gegen 93,5 % bei 14,9 statt 19,5
+geänderten Diensten), der Zielkonflikt zwischen Lastverteilung und Stabilität, Rechenzeit.
 
 **Nicht gemessen, nur plausibel:** Reduktion des manuellen Planungsaufwands, Wirkung auf
 Zufriedenheit und Fluktuation, vermiedene Bettensperrungen. Diese Aussagen bräuchten eine

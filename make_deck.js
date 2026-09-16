@@ -321,12 +321,12 @@ s.addNotes("Für die Personalbindung ist das der relevante Wert: Zwei Pläne mit
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
   "Zwei Befunde — einer über die Zielfunktion, einer über die Messung selbst.",
-  IMG("03_planstabilitaet.png"), 2.027, [
+  IMG("03_planstabilitaet.png"), 2.003, [
     { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur 51 % der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 95 %." },
-    { t: "Rechts: derselbe Ausgangsplan", d: "Erst so sind die Verfahren vergleichbar. Unter der Welle: 91 % gegen 87 % — die Optimierung in 14 von 15 Instanzen vorn." },
-    { t: "Warum das nötig war", d: "Wer jedes Verfahren gegen seinen eigenen Plan misst, belohnt den schlechteren Planer: Einen schwachen Plan zu halten ist billig." },
+    { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 14,9 statt 19,5 geänderte Dienste je Monat — ein Viertel weniger Umstellungen für die Mitarbeitenden." },
+    { t: "Gegengeprüft", d: "Lassen wir beide denselben Plan reparieren, bleibt die Optimierung vorn: 95,0 % gegen 91,8 %. Der Vorsprung liegt nicht am Ausgangsplan." },
   ]);
-s.addNotes("Zwei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens: Wir hatten die Planstabilitaet zunaechst falsch gemessen, jedes Verfahren gegen seinen eigenen Ausgangsplan. Der Greedy-Plan ist schlechter, und einen schlechten Plan unveraendert zu lassen kostet nichts. Auf identischem Ausgangsplan dreht sich das Ergebnis. Diesen Fehler zeigen wir offen - er ist lehrreicher als das Ergebnis.");
+s.addNotes("Zwei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war - einen schwachen Plan unveraendert zu lassen ist billig. Deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste und haben zusaetzlich beide Verfahren denselben Plan reparieren lassen. In beiden Pruefungen bleibt die Optimierung vorn. Falls jemand fragt: Erbt die Optimierung einen Excel-Plan, aendert sie mehr - weil sie dessen offene Dienste und Regelverstoesse mitbehebt. Das ist der Migrationsfall.");
 
 // ---------- 12 Ergebnis Ausfallstruktur -----------------------------------
 s = pres.addSlide();
@@ -350,7 +350,7 @@ s.addText("Gemessen", {
 s.addText([
   { text: "Regelkonformität unter Knappheit: 100 % gegenüber 0 % der Pläne", options: { bullet: true, breakLine: true } },
   { text: "Ungleichverteilung der Last um Faktor fünf reduziert — aber nur ohne Ausfallwelle", options: { bullet: true, breakLine: true } },
-  { text: "Umplanung auf identischem Plan: 15 statt 25 Änderungen", options: { bullet: true, breakLine: true } },
+  { text: "Planänderungen je Monat: 14,9 statt 19,5 — ein Viertel weniger", options: { bullet: true, breakLine: true } },
   { text: "Umplanung in unter einer Sekunde", options: { bullet: true } },
 ], {
   x: M + 0.35, y: 2.75, w: 5.15, h: 2.9, isTextBox: true, margin: 0,

@@ -262,34 +262,39 @@ with tabs[0]:
 with tabs[1]:
     st.markdown("**Beide Verfahren auf identischer Datengrundlage**, gleiches "
                 "Szenario, gleiche Regeln. Das ist der Kern der Evaluation.")
-    ref_label = st.radio(
-        "Gemeinsamer Ausgangsplan, den beide Verfahren reparieren",
-        list(METHODS.keys()), index=1, horizontal=True,
-        help="Die Planstabilitaet ist nur vergleichbar, wenn beide Verfahren "
-             "denselben Plan vorfinden. Ein schlechter Ausgangsplan laesst sich "
-             "billiger unveraendert lassen als ein guter - wer jedes Verfahren "
-             "gegen seinen eigenen Plan misst, belohnt den schlechteren Planer.")
-    ref_m = METHODS[ref_label]
+    MODI = {
+        "End-to-End: jedes Verfahren plant und repariert selbst": "self",
+        "Gemeinsamer Ausgangsplan: Regelbasiert": "greedy",
+        "Gemeinsamer Ausgangsplan: MILP-Optimierung": "milp",
+    }
+    modus_label = st.radio(
+        "Welcher Vergleich?", list(MODI.keys()), index=0,
+        help="End-to-End beantwortet die Leitfrage: Excel-Welt gegen KI-Welt, "
+             "jedes Verfahren erstellt den Monatsplan selbst und passt ihn "
+             "selbst an. Die beiden anderen Modi sind die Methodenkontrolle - "
+             "sie lassen beide Verfahren denselben Plan reparieren und zeigen, "
+             "dass das Ergebnis nicht an unterschiedlichen Ausgangsplaenen "
+             "haengt.")
+    modus = MODI[modus_label]
 
     if st.button("Vergleich rechnen", type="primary"):
         st.session_state["compare_key"] = (data_key, scenario, manual_key,
-                                           time_limit, ref_m)
+                                           time_limit, modus)
 
     if st.session_state.get("compare_key") == (data_key, scenario, manual_key,
-                                               time_limit, ref_m):
-        with st.spinner(f"Ausgangsplan ({ref_label}) ..."):
-            shared_ref = cached((data_key, ref_m, "REF", (), time_limit),
-                                lambda: compute(ref_m, REFERENCE_SCENARIO, set(),
-                                                limit=time_limit))
+                                               time_limit, modus):
         rows = []
         for label, m in METHODS.items():
+            ref_m = m if modus == "self" else modus
             with st.spinner(f"{label} ..."):
-                m_cur = cached((data_key, m, scenario, manual_key, "SHARED",
-                                ref_m, time_limit),
-                               lambda m=m: compute(m, scenario, manual, shared_ref,
-                                                   time_limit))
+                m_ref = cached((data_key, ref_m, "REF", (), time_limit),
+                               lambda r=ref_m: compute(r, REFERENCE_SCENARIO, set(),
+                                                       limit=time_limit))
+                m_cur = cached((data_key, m, scenario, manual_key, ref_m, time_limit),
+                               lambda m=m, r=m_ref: compute(m, scenario, manual, r,
+                                                            time_limit))
             k = P.evaluate(ctx, m_cur)
-            s = P.stability(shared_ref, m_cur)
+            s = P.stability(m_ref, m_cur)
             rows.append({
                 "Verfahren": label,
                 "Besetzungsquote": f"{k['besetzungsquote']:.1%}",
@@ -306,18 +311,31 @@ with tabs[1]:
             })
         st.dataframe(pd.DataFrame(rows).set_index("Verfahren").T,
                      use_container_width=True)
-        ref_k = P.evaluate(ctx, shared_ref)
+        if modus == "self":
+            st.caption(
+                "**End-to-End-Vergleich.** Jedes Verfahren erstellt den "
+                "Monatsplan selbst und passt ihn selbst an - so, wie es in der "
+                "jeweiligen Welt tatsaechlich liefe. Das ist der Vergleich, den "
+                "die Leitfrage stellt. Planstabilitaet ist hier gegen zwei "
+                "verschiedene Ausgangsplaene gemessen; lesen Sie sie deshalb "
+                "immer zusammen mit den absolut geaenderten Zuweisungen - nur "
+                "wenn beide zugunsten desselben Verfahrens ausfallen, ist die "
+                "Aussage belastbar.")
+        else:
+            ref_name = ("Regelbasiert" if modus == "greedy" else "MILP-Optimierung")
+            st.caption(
+                f"**Methodenkontrolle.** Beide Verfahren reparieren denselben "
+                f"Ausgangsplan ({ref_name}). Das prueft, ob ein Unterschied im "
+                "End-to-End-Vergleich nur an der Qualitaet der Ausgangsplaene "
+                "haengt. Achtung bei der Interpretation: Erbt ein Verfahren "
+                "einen Plan mit offenen Diensten und Regelverstoessen, kann es "
+                "diese nur beheben, indem es Zuweisungen aendert - eine "
+                "niedrige Zahl geaenderter Zuweisungen ist dann kein Qualitaets"
+                "merkmal, sondern Untaetigkeit.")
         st.caption(
-            f"Beide Verfahren reparieren denselben Ausgangsplan ({ref_label}: "
-            f"{ref_k['weiche_abweichungen']} weiche Abweichungen, Spanne "
-            f"{ref_k['auslastung_spanne']:.1%}). Nur so ist die Planstabilitaet "
-            "zwischen den Verfahren vergleichbar: Wird jedes Verfahren gegen "
-            "seinen eigenen Ausgangsplan gemessen, schneidet das Verfahren mit "
-            "dem schlechteren Ausgangsplan scheinbar besser ab, weil sich ein "
-            "schwacher Plan billiger unveraendert lassen laesst. Streuung und "
-            "Spanne der Auslastung messen, wie gleichmaessig die Arbeit ueber "
-            "die Belegschaft verteilt ist - erst sie unterscheiden zwei Plaene "
-            "mit gleicher Besetzungsquote.")
+            "Streuung und Spanne der Auslastung messen, wie gleichmaessig die "
+            "Arbeit ueber die Belegschaft verteilt ist - erst sie unterscheiden "
+            "zwei Plaene mit gleicher Besetzungsquote.")
     else:
         st.caption("Der Vergleich rechnet beide Verfahren durch und braucht je nach "
                    "Rechenzeitgrenze einige Sekunden.")

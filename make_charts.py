@@ -153,38 +153,39 @@ ax.set_xticks(range(4), names, fontsize=9)
 ax.set_ylim(0, 112)
 ax.set_title("Je Verfahren: Neuplanung oder Reparatur", fontsize=13, pad=12)
 
-# rechts: zwischen den Verfahren - beide reparieren denselben Ausgangsplan
+# rechts: End-to-End - wie viele Dienste aendern sich tatsaechlich
 ax = axes[1]
 SC = ["S0", "S1", "S2"]
 LBL = ["S0\nkeine Ausfälle", "S1\nverteilte Einzeltage", "S2\nAusfallwelle"]
-gre = [d[(d.method == "Greedy auf MILP-Plan") & (d.scenario == sc)]["planstabilitaet"].mean() * 100
+gre = [d[(d.method == "Greedy reaktiv") & (d.scenario == sc)]["geaenderte_zuweisungen"].mean()
        for sc in SC]
-mil = [d[(d.method == "MILP reaktiv") & (d.scenario == sc)]["planstabilitaet"].mean() * 100
+mil = [d[(d.method == "MILP reaktiv") & (d.scenario == sc)]["geaenderte_zuweisungen"].mean()
        for sc in SC]
 x = range(3)
-b1 = ax.bar([i - 0.19 for i in x], gre, 0.36, color=BLUE, label="Regelbasiert repariert")
-b2 = ax.bar([i + 0.19 for i in x], mil, 0.36, color=ORANGE, label="MILP repariert")
+b1 = ax.bar([i - 0.19 for i in x], gre, 0.36, color=BLUE, label="Regelbasiert")
+b2 = ax.bar([i + 0.19 for i in x], mil, 0.36, color=ORANGE, label="MILP-Optimierung")
 for bset in (b1, b2):
     for bar in bset:
-        ax.annotate(f"{bar.get_height():.0f} %",
+        ax.annotate(f"{bar.get_height():.1f}".replace(".", ","),
                     (bar.get_x() + bar.get_width() / 2, bar.get_height()),
                     ha="center", va="bottom", fontsize=10, color=INK,
                     xytext=(0, 3), textcoords="offset points")
-frame(ax, "unveränderte Zuweisungen in %")
+frame(ax, "geänderte Zuweisungen je Plan")
 ax.set_xticks(list(x), LBL, fontsize=9)
-ax.set_ylim(0, 118)
-ax.set_title("Zwischen den Verfahren: derselbe Ausgangsplan", fontsize=13, pad=12)
+ax.set_ylim(0, max(gre + mil) * 1.3)
+ax.set_title("End-to-End: wie viel ändert sich wirklich", fontsize=13, pad=12)
 ax.legend(frameon=False, fontsize=9, loc="upper center", ncol=2,
           bbox_to_anchor=(0.5, 1.02))
 
 fig.suptitle("Planstabilität nach kurzfristigen Ausfällen",
              fontsize=15, fontweight="bold", y=1.04)
 fig.text(0.0, -0.085,
-         "Anteil der (Person, Tag)-Zuweisungen, die gegenüber dem Ausgangsplan bestehen "
-         "bleiben · alle Personaldecken\nRechts reparieren beide Verfahren denselben "
-         "Plan. Ohne diese Bedingung schneidet das Verfahren mit dem schlechteren "
-         "Ausgangsplan\nscheinbar besser ab — einen schwachen Plan unveraendert zu "
-         "lassen ist billiger als einen guten gut zu halten.".replace("aendert", "ändert"),
+         "Links: Anteil der (Person, Tag)-Zuweisungen, die gegenüber dem eigenen "
+         "Ausgangsplan bestehen bleiben · alle Personaldecken und Szenarien\n"
+         "Rechts: absolute Zahl geänderter Dienste im End-to-End-Vergleich — jedes "
+         "Verfahren erstellt und repariert seinen eigenen Plan.\nLassen beide "
+         "Verfahren denselben Plan reparieren, bleibt die Optimierung vorn "
+         "(95,0 % gegen 91,8 % Stabilität auf dem Plan der Optimierung).",
          fontsize=9, color=MUTED)
 fig.tight_layout()
 save(fig, "03_planstabilitaet.png")
