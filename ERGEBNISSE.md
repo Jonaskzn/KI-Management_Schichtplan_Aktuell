@@ -221,9 +221,12 @@ Szenarien).
 
 ### 4.1 Der End-to-End-Vergleich — die Antwort auf die Leitfrage
 
-Die Leitfrage vergleicht zwei **Vorgehensweisen**, nicht zwei Reparaturalgorithmen. In der
+Die Leitfrage fragt nach „Erstellung **und** kurzfristiger Anpassung" — also nach einer
+**Kette aus zwei Schritten**, nicht nach einem isolierten Reparaturalgorithmus. In der
 Excel-Welt erstellt die Heuristik den Monatsplan und passt ihn an; in der KI-Welt macht das
-die Optimierung. Jedes Verfahren tut also, was es real täte:
+die Optimierung. Beide arbeiten dabei auf **demselben Datensatz**: derselben Belegschaft,
+denselben Bedarfs- und Regelspalten, denselben Ausfallszenarien. Was sich unterscheidet, ist
+allein das Verfahren. Jedes tut also, was es real täte:
 
 | Kennzahl (Mittel über 45 Pläne) | Regelbasiert | MILP | |
 |---|---|---|---|
@@ -291,7 +294,38 @@ sich nur beheben, **indem** Zuweisungen geändert werden. Ein Verfahren, das sie
 lässt, gewinnt die Stabilitätskennzahl durch Untätigkeit. Wer einen schlechten Plan erbt,
 muss ihn anfassen, um ihn rechtskonform zu machen.
 
-### 4.3 Was daraus folgt
+### 4.3 Alle vier Kombinationen — warum der Vorteil systemisch ist
+
+Kreuzt man beide Ausgangspläne mit beiden Reparaturverfahren, ergibt sich ein Bild, das
+weder dem einen noch dem anderen Schritt allein zuzuschreiben ist. Geänderte Zuweisungen je
+Plan:
+
+| | repariert von der Heuristik | repariert von der Optimierung |
+|---|---|---|
+| **Ausgangsplan der Heuristik** | 19,5 | 25,2 |
+| **Ausgangsplan der Optimierung** | 24,8 | **14,9** |
+
+Zwei Ablesungen:
+
+**Zeilenweise** ändert die Optimierung auf jedem geerbten Plan mehr als die Heuristik. Das
+ist zwingend und kein Tuning-Problem: Ein Plan mit offenen Diensten und Regelverstößen wird
+nur dadurch rechtskonform, dass Zuweisungen geändert werden. Ein gemeinsamer Ausgangsplan —
+gleich welcher — kann die Optimierung auf dieser Kennzahl deshalb nie vorn sehen.
+
+**Diagonal** zeigt sich der eigentliche Befund: Nur die Kombination „Optimierung plant und
+Optimierung repariert" erreicht 14,9. Ein guter Plan, von der Heuristik repariert, kostet
+mit 24,8 Änderungen **mehr** als der schwache Plan der Heuristik in ihrer eigenen Hand
+(19,5) — weil ein dicht gepackter Plan ohne Slack von einer lokal entscheidenden Heuristik
+nicht effizient repariert werden kann. Der Vorteil steckt also **weder in der Planung noch
+in der Anpassung allein, sondern im Zusammenspiel**: Die Optimierung baut einen Plan, der
+Spielraum an den richtigen Stellen lässt, und weiß zugleich, wie sie ihn nutzt.
+
+Betriebswirtschaftlich ist das die relevante Aussage: Ein Optimierer, der nur als
+Feuerwehr auf bestehende Excel-Pläne gesetzt wird, hebt einen Teil des Nutzens — die
+Rechtskonformität —, aber nicht den Effizienzvorteil. Der entsteht erst, wenn auch die
+Monatsplanung aus dem System kommt.
+
+### 4.4 Was daraus folgt
 
 Es gibt **keinen** Aufbau, in dem die Optimierung auf allen Kennzahlen gleichzeitig gewinnt,
 wenn sie einen mangelhaften Plan erbt — „möglichst wenig ändern" und „Mängel beheben" sind
@@ -304,10 +338,12 @@ Für die Arbeit folgt daraus eine klare Ordnung:
    die Optimierung gewinnt dort jede Kennzahl.
 2. **Belegt wird er durch die Methodenkontrolle auf dem Plan der Optimierung** (4.2). Sie
    zeigt, dass der Vorsprung nicht an unterschiedlichen Ausgangsplänen hängt.
-3. **Der dritte Fall — Optimierung erbt einen Excel-Plan — ist der Migrationsfall.** Er
-   gehört in die Diskussion, nicht in die Ergebnistabelle: Wer umsteigt, muss im ersten
-   Monat mit mehr Änderungen rechnen, weil Altlasten mitbehoben werden.
-4. **Jede Stabilitätsangabe nennt ihren Ausgangsplan.** Unsere erste Auswertung tat das
+3. **Die Vier-Felder-Tafel (4.3) trägt den Wirkmechanismus**: Der Effizienzvorteil ist
+   systemisch und entsteht erst, wenn Planung und Anpassung aus derselben Hand kommen.
+4. **Der Migrationsfall — Optimierung erbt einen Excel-Plan — gehört in die Diskussion**,
+   nicht in die Ergebnistabelle: Wer umsteigt, muss im ersten Monat mit mehr Änderungen
+   rechnen, weil Altlasten mitbehoben werden.
+5. **Jede Stabilitätsangabe nennt ihren Ausgangsplan.** Unsere erste Auswertung tat das
    nicht und war dadurch nicht interpretierbar.
 
 ---
@@ -403,8 +439,9 @@ Machine Learning wurde geprüft und verworfen: Es gibt keine zu lernende Zielvar
 keine historischen Planentscheidungen als Trainingsdaten. Das Problem ist eine Zuordnung
 unter harten Nebenbedingungen mit mehreren konkurrierenden Zielen — dafür sind
 mathematische Optimierung und Constraint Programming die einschlägigen Verfahren
-(Burke et al. 2004; Van den Bergh et al. 2013). Umgesetzt ist ein MILP, gelöst mit HiGHS
-über `scipy.optimize.milp`; ein CP-SAT-Modell wäre eine gleichwertige Alternative.
+(Burke et al. 2004; Van den Bergh et al. 2013). Umgesetzt ist ein MILP mit 2.429 Variablen und
+4.232 Nebenbedingungen, gelöst mit HiGHS über `scipy.optimize.milp`; ein CP-SAT-Modell wäre
+eine gleichwertige Alternative.
 
 Rechtliche und vertragliche Grenzen sind harte Nebenbedingungen. Unterbesetzung,
 Untergrenzenverstöße, Lastverteilung, Dienstwünsche sowie Wochenend- und
@@ -414,6 +451,51 @@ ausgewiesenen Lücken liefert statt gar keinen.
 
 **Beide Verfahren werden von derselben, verfahrensunabhängigen Funktion `evaluate()`
 bewertet.** Ein Verfahren darf seine eigene Regelkonformität nicht selbst behaupten.
+
+### 7.1 Begriffsklärung: In welchem Sinn ist das „KI"?
+
+Die Frage ist berechtigt und wird in der Verteidigung gestellt werden. Die Antwort hat drei
+Ebenen, die auseinandergehalten werden müssen.
+
+**Umgangssprachlich** meint „KI" heute meist maschinelles Lernen. In diesem Sinn ist das
+Verfahren **keine** KI: Das Modell lernt nichts, es hat keine Trainingsphase, keine
+Parameter, die aus Daten geschätzt werden. Es löst bei jedem Aufruf ein frisch aufgestelltes
+Optimierungsproblem.
+
+**Fachlich** gehören Suche, Constraint-Erfüllung und automatisches Planen und Scheduling
+seit den Anfängen zum Kern der Künstlichen Intelligenz und stehen in jedem Standardlehrbuch
+des Fachs (Russell & Norvig 2021). Nurse Rostering wird in der KI- wie in der
+Operations-Research-Literatur gleichermaßen behandelt (Burke et al. 2004). In diesem Sinn
+ist das Verfahren KI — und zwar eine ihrer ältesten und am besten verstandenen Formen.
+
+**Regulatorisch** ist die Einordnung offen. Art. 3 Abs. 1 der KI-Verordnung (EU) 2024/1689
+definiert ein KI-System funktional über die Fähigkeit, aus Eingaben abzuleiten, wie Ausgaben
+erzeugt werden. Erwägungsgrund 12 nennt „logik- und wissensbasierte Ansätze, die aus
+kodiertem Wissen schlussfolgern" ausdrücklich als Inferenztechnik, nimmt aber Systeme aus,
+die „ausschließlich auf von natürlichen Personen definierten Regeln beruhen, um Operationen
+automatisch auszuführen". Ein MILP-Solver liegt dazwischen: Die Regeln und Gewichte stammen
+von Menschen, der Dienstplan selbst aber ist nicht vorprogrammiert, sondern wird aus dem
+kodierten Wissen abgeleitet. Eine eindeutige Zuordnung nehmen wir nicht vor; beide Lesarten
+sind vertretbar.
+
+**Für dieses Projekt entscheidend ist:** Die Aufgabenstellung verlangt kein maschinelles
+Lernen. Sie verlangt, „objektiv zu prüfen, welcher technische Ansatz für das Problem
+geeignet ist", nennt mathematische Optimierung und Constraint Programming ausdrücklich als
+Kandidaten und warnt davor, ML als Standardantwort anzunehmen. Die Methodenwahl folgt genau
+dieser Vorgabe und ist aus der Problemstruktur begründet, nicht aus einer Begriffsmode.
+
+### 7.2 Wo maschinelles Lernen anschlussfähig wäre
+
+Verworfen ist ML für die **Planerstellung**, nicht für das Gesamtsystem. Ein hybrider Aufbau
+ist naheliegend: Ein Prognosemodell schätzt aus historischen Daten die zu erwartende
+Belegung und die Ausfallwahrscheinlichkeit je Tag; diese Schätzungen gehen als Parameter in
+die Optimierung ein („predict-then-optimize"). Der Optimierer könnte dann Reserven dort
+vorhalten, wo Ausfälle wahrscheinlich sind, statt gleichmäßig.
+
+**Das ist in diesem Prototyp ausdrücklich nicht umgesetzt.** Für ein Prognosemodell
+bräuchte es echte historische Betriebsdaten; unsere Daten sind synthetisch, ein darauf
+trainiertes Modell würde nur die eigenen Generatorannahmen zurückgeben. Der Punkt gehört in
+den Ausblick, nicht in die Ergebnisse.
 
 ---
 
@@ -437,6 +519,14 @@ weil die Welle den Spielraum nähme, sondern weil die Vorgabe „möglichst weni
 Umverteilen unterbindet. Bei vollständiger Neuplanung hält die Optimierung auch unter der
 Welle 0,164. Gleichmäßigere Belastung *und* maximale Planstabilität sind nicht gleichzeitig
 zu haben; welches Ziel schwerer wiegt, ist eine Managemententscheidung.
+
+**Der Effizienzvorteil ist an die durchgängige Nutzung gebunden.** Übernimmt die
+Optimierung nur die Anpassung bestehender Excel-Pläne, sichert sie weiterhin
+Rechtskonformität und Besetzung (null statt 0,67 harte Verstöße, null statt 2,89 offene
+Dienste), braucht dafür aber 25,2 statt 19,5 Änderungen. Der Rückgang auf 14,9 Änderungen
+stellt sich erst ein, wenn auch die Monatsplanung aus dem System kommt (Abschnitt 4.3). Für
+eine Einführungsentscheidung heißt das: Eine reine „Feuerwehr"-Nutzung hebt den
+Rechtssicherheitsnutzen, nicht den Entlastungsnutzen.
 
 **Nicht gemessen, nur plausibel** — in der Hausarbeit als Schätzung zu kennzeichnen:
 Reduktion des manuellen Planungsaufwands, Wirkung gleichmäßigerer Belastung auf
@@ -482,16 +572,26 @@ Nach dieser Kampagne lässt sich die Antwort präzisieren:
    vollständiger Neuplanung) oder einen stabilen Plan (91 % unveränderte Dienste), nicht
    beides zugleich. Die Regelkonformität bleibt in jedem Fall erhalten.
 
+4. **Erstellung und Anpassung sind nicht trennbar.** Die Vier-Felder-Tafel in Abschnitt 4.3
+   zeigt, dass der Effizienzvorteil nur entsteht, wenn beide Schritte aus demselben System
+   kommen: 14,9 geänderte Dienste je Plan gegenüber 19,5 in der Excel-Welt — während
+   dieselbe Optimierung auf einem geerbten Excel-Plan 25,2 Änderungen braucht. Die Leitfrage
+   fragt zu Recht nach beidem zusammen.
+
 Punkt 2 ist der methodische Kernbefund der Arbeit: Nicht „Optimierung schlägt Heuristik",
 sondern „Optimierung schlägt Heuristik dann, wenn die richtigen Ziele im Modell stehen".
-Punkt 3 ist der betriebswirtschaftliche: Der Prototyp liefert keine überlegene Lösung auf
-allen Kennzahlen gleichzeitig, sondern macht einen Zielkonflikt entscheidbar, der in der
-Excel-Planung unsichtbar bleibt.
+Punkt 3 ist der betriebswirtschaftliche Vorbehalt: Der Prototyp liefert keine überlegene
+Lösung auf allen Kennzahlen in jeder Lage, sondern macht einen Zielkonflikt entscheidbar,
+der in der Excel-Planung unsichtbar bleibt. Punkt 4 ist die Einführungsempfehlung: Ein
+Optimierer, der nur reaktiv auf bestehende Pläne gesetzt wird, hebt einen Teil des Nutzens
+nicht.
 
 ---
 
 ## Quellen
 
+- Russell, S. J., & Norvig, P. (2021). *Artificial Intelligence: A Modern Approach* (4th ed.). Pearson. — Suche, Constraint-Erfüllung und automatisches Planen als Kerngebiete der KI
+- Verordnung (EU) 2024/1689 (KI-Verordnung), Art. 3 Abs. 1 und Erwägungsgrund 12 — <https://artificialintelligenceact.eu/article/3/>
 - Burke, E. K., De Causmaecker, P., Vanden Berghe, G., & Van Landeghem, H. (2004). The State of the Art of Nurse Rostering. *Journal of Scheduling*, 7(6), 441–499.
 - Van den Bergh, J., Beliën, J., De Bruecker, P., Demeulemeester, E., & De Boeck, L. (2013). Personnel scheduling: A literature review. *European Journal of Operational Research*, 226(3), 367–385.
 - Wickert, T. I., Smet, P., & Vanden Berghe, G. The nurse rerostering problem: Strategies for reconstructing disrupted schedules. *Computers & Operations Research*.

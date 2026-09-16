@@ -232,13 +232,13 @@ s.addText([
   x: M + 6.55, y: 2.75, w: 5.03, h: 2.5, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 14, color: INK2, lineSpacing: 20, paraSpaceAfter: 8,
 });
-s.addText("Umgesetzt als gemischt-ganzzahliges Modell mit 2.338 Variablen und 4.066 " +
+s.addText("Umgesetzt als gemischt-ganzzahliges Modell mit 2.429 Variablen und 4.232 " +
   "Nebenbedingungen, gelöst mit dem freien Solver HiGHS.", {
   x: M, y: 5.75, w: W - 2 * M, h: 0.6, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 15, color: INK, lineSpacing: 22,
 });
 source(s, "Burke et al. (2004), Journal of Scheduling · Van den Bergh et al. (2013), EJOR");
-s.addNotes("Diese Folie ist wichtig für die Bewertung: Methodenwahl begründet, nicht ML als Default angenommen.");
+s.addNotes("Diese Folie ist wichtig fuer die Bewertung: Methodenwahl begruendet, nicht ML als Default angenommen. Erwartbare Rueckfrage: Ist das ueberhaupt KI? Antwort in drei Ebenen. Erstens, die Aufgabenstellung verlangt kein ML - sie verlangt eine begruendete Methodenwahl und nennt mathematische Optimierung ausdruecklich als Kandidaten. Zweitens, fachlich gehoeren Suche, Constraint-Erfuellung und Scheduling seit jeher zum Kern der KI - siehe Russell und Norvig. Drittens, umgangssprachlich meint KI heute maschinelles Lernen, und in dem Sinn ist es keine KI: Das Modell lernt nicht. Wo ML passen wuerde, sagen wir im Ausblick - Ausfall- und Belegungsprognose als Vorstufe der Optimierung.");
 
 // ---------- 6 Daten --------------------------------------------------------
 s = pres.addSlide();
@@ -324,9 +324,9 @@ chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
   IMG("03_planstabilitaet.png"), 2.003, [
     { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur 51 % der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 95 %." },
     { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 14,9 statt 19,5 geänderte Dienste je Monat — ein Viertel weniger Umstellungen für die Mitarbeitenden." },
-    { t: "Gegengeprüft", d: "Lassen wir beide denselben Plan reparieren, bleibt die Optimierung vorn: 95,0 % gegen 91,8 %. Der Vorsprung liegt nicht am Ausgangsplan." },
+    { t: "Gegengeprüft", d: "Beide denselben Plan reparieren lassen: 95,0 % gegen 91,8 %. Nur aus einer Hand sinkt die Zahl auf 14,9." },
   ]);
-s.addNotes("Zwei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war - einen schwachen Plan unveraendert zu lassen ist billig. Deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste und haben zusaetzlich beide Verfahren denselben Plan reparieren lassen. In beiden Pruefungen bleibt die Optimierung vorn. Falls jemand fragt: Erbt die Optimierung einen Excel-Plan, aendert sie mehr - weil sie dessen offene Dienste und Regelverstoesse mitbehebt. Das ist der Migrationsfall.");
+s.addNotes("Drei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war, deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste. Drittens, falls jemand nach einem gemeinsamen Ausgangsplan fragt - wir haben alle vier Kombinationen gerechnet. Geaenderte Dienste: Excel-Plan von Excel repariert 19,5. Excel-Plan von MILP 25,2. MILP-Plan von Excel 24,8. MILP-Plan von MILP 14,9. Zeilenweise aendert MILP immer mehr, weil es die Maengel des geerbten Plans mitbehebt. Nur die Diagonale erreicht 14,9 - der Vorteil ist systemisch, Planung und Anpassung gehoeren zusammen. Genau deshalb fragt die Leitfrage nach beidem.");
 
 // ---------- 12 Ergebnis Ausfallstruktur -----------------------------------
 s = pres.addSlide();

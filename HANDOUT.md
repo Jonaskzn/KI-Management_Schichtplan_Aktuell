@@ -45,13 +45,18 @@ auf dasselbe Ausfallvolumen kalibriert und unterscheiden sich nur in der Struktu
 verteilte Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der
 Struktur zuzurechnen ist und nicht dem Umfang.
 
-## Die acht wichtigsten Learnings
+## Die sieben wichtigsten Learnings
 
 **1. Machine Learning war nicht die Antwort — und das war das erste Ergebnis.**
 Es gibt keine zu lernende Zielvariable und keine historischen Planentscheidungen als
-Trainingsdaten. Das Problem ist eine Zuordnung unter harten Nebenbedingungen mit
-mehreren konkurrierenden Zielen. Einschlägig sind mathematische Optimierung und
-Constraint Programming. Wer „KI" automatisch mit ML gleichsetzt, baut am Problem vorbei.
+Trainingsdaten. Das Problem ist eine Zuordnung unter harten Nebenbedingungen mit mehreren
+konkurrierenden Zielen. Einschlägig sind mathematische Optimierung und Constraint
+Programming. Zur erwartbaren Rückfrage „ist das dann überhaupt KI?": Umgangssprachlich —
+nein, das Modell lernt nicht. Fachlich — ja, Suche, Constraint-Erfüllung und Scheduling
+gehören seit den Anfängen zum Kern der KI (Russell & Norvig). Und die Aufgabenstellung
+verlangt ausdrücklich eine *begründete* Methodenwahl, nicht ML. Wo ML anschlussfähig wäre:
+Ausfall- und Belegungsprognose als Vorstufe der Optimierung — das steht im Ausblick, nicht
+in den Ergebnissen.
 
 **2. Ein zu leichter Datensatz hätte das Projekt entwertet.**
 Bei bedarfsgerechter Personaldecke erreichen *beide* Verfahren nahezu 100 % Besetzung
@@ -63,7 +68,11 @@ optimierten Pläne. Wer nur eine bequeme Instanz rechnet, misst nichts.
 **3. Die Zielfunktion entscheidet, nicht das Verfahren.**
 Nach einem Ausfall neu zu optimieren erhielt nur 51 % der Dienste — schlechter als die
 simple Heuristik. Erst als „möglichst wenig ändern" ausdrücklich ins Modell kam, stieg die
-Stabilität auf 95 %. Optimierung ist nur so gut wie die Ziele, die man ihr vorgibt.
+Stabilität auf 95 %. Der Preis dafür ist sichtbar: Unter der Ausfallwelle liegt die
+Lastverteilung dann gleichauf mit der Heuristik (Spanne 0,377 gegen 0,380), während
+vollständige Neuplanung 0,163 erreicht. Gewicht 200 für „nicht ändern" gegen 0,02 für
+Lastausgleich — gleichmäßige Last **oder** stabiler Plan, unter Druck ist beides zugleich
+nicht zu haben. Welches Ziel gewinnt, ist eine Führungsentscheidung, keine technische.
 
 **4. Regeln gehören in die Daten, nicht in den Code.**
 Ruhezeiten, Verhältniszahlen und Qualifikationsvorgaben stehen als Spalten im Datensatz.
@@ -75,55 +84,41 @@ Eine eigene Funktion bewertet den fertigen Plan unabhängig davon, wer ihn erzeu
 Ohne diese Trennung wäre jeder KPI-Vergleich zirkulär gewesen — und sie hat uns
 tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
-**6. Zwei Ziele, die einander unter Druck ausschließen.**
-Unter der Ausfallwelle liegen beide Verfahren bei der Lastverteilung gleichauf (Spanne
-0,376 gegen 0,380) — aber nicht, weil die Optimierung versagt. Bei vollständiger
-Neuplanung hält sie die Spanne auch dort auf 0,164, halb so hoch wie die Heuristik. Den
-Vorsprung gibt sie erst auf, wenn wir ihr *Planstabilität* als vorrangiges Ziel vorgeben:
-Gewicht 200 für „nicht ändern" gegen 0,02 für Lastausgleich. Dann füllt sie nur noch
-Lücken. Gleichmäßige Last **oder** stabiler Plan — unter Druck ist beides zugleich nicht
-zu haben, und welches Ziel gewinnt, ist eine Führungsentscheidung.
+**6. Der Vorteil steckt in der Kette, nicht in einem Schritt.**
+Wir haben alle vier Kombinationen aus Ausgangsplan und Reparaturverfahren gerechnet
+(geänderte Dienste je Monat): Excel-Plan von Excel repariert **19,5** · Excel-Plan von MILP
+**25,2** · MILP-Plan von Excel **24,8** · MILP-Plan von MILP **14,9**. Auf jedem geerbten
+Plan ändert die Optimierung *mehr* — weil sie dessen offene Dienste und Regelverstöße
+mitbehebt. Nur wenn Planung **und** Anpassung aus demselben System kommen, sinkt der Wert.
+Für die Praxis: Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die
+Rechtssicherheit, aber nicht die Entlastung.
 
-**7. Planstabilität misst Zurückhaltung, nicht Qualität.**
-Als Prozentwert hängt sie davon ab, wie gut der Ausgangsplan war — einen schwachen Plan
-unverändert zu lassen ist billig, weil es nichts zu verteidigen gibt. Ein Verfahren, das
-offene Dienste und Regelverstöße einfach stehen lässt, gewinnt diese Kennzahl durch
-Untätigkeit. Wir berichten sie deshalb nie allein, sondern immer mit der **absoluten Zahl
-geänderter Dienste** — und haben zusätzlich beide Verfahren denselben Plan reparieren
-lassen. In beiden Prüfungen bleibt die Optimierung vorn (95,0 % gegen 91,8 %). Eine
-Kennzahl, deren Bezugspunkt man nicht mitnennt, ist nicht interpretierbar.
+**7. Eine Kennzahl ohne ihren Bezugspunkt ist nicht interpretierbar.**
+Planstabilität als Prozentwert hängt davon ab, wie gut der Ausgangsplan war — ein Verfahren,
+das offene Dienste und Regelverstöße stehen lässt, gewinnt sie durch Untätigkeit. Wir
+berichten sie deshalb nie allein, sondern mit der absoluten Zahl geänderter Dienste, und
+haben zusätzlich beide Verfahren denselben Plan reparieren lassen (95,0 % gegen 91,8 %).
+Dieselbe Disziplin beim Szenarienvergleich: Die Ausfallwelle sah zunächst instabiler aus als
+verteilte Einzelausfälle — betrachtet man nur die Instanzen, in denen sie *nicht* mehr
+Ausfalltage enthielt, schrumpfte der Unterschied von 2,5 auf 0,8 Prozentpunkte. Überwiegend
+ein Mengen-, kein Struktureffekt. Der Verteilungseffekt hielt der Prüfung stand (6 von 6).
+Nur den berichten wir.
 
-**8. Einen Effekt messen heißt, die Alternativerklärung ausschließen.**
-Die Ausfallwelle sah zunächst auch instabiler aus als verteilte Einzelausfälle. Als wir nur
-die Instanzen betrachteten, in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der
-Unterschied von 2,5 auf 0,8 Prozentpunkte — überwiegend ein Mengen-, kein Struktureffekt.
-Der Verteilungseffekt hielt der Prüfung stand (6 von 6 Instanzen). Nur den berichten wir.
+## Herausforderungen und Erfolgsfaktoren
 
-## Herausforderungen
-
-- **Realitätsnähe kollidiert mit Recht.** Der bundesweite Durchschnitt an Hilfskräften
-  (17,6 %) liegt über der PpUGV-Grenze für unseren Bereich (10 %). Die strengere Norm
-  hat Vorrang — solche Konflikte muss man bemerken und begründen.
-- **Annahmen sauber kennzeichnen.** 13 Setzungen mussten als Annahmen dokumentiert
-  werden, weil sie nicht belegbar sind. Das ist mühsam, aber prüfungsrelevant.
-- **Deployment.** Die Abhängigkeitsdatei der Streamlit Cloud hat den Prototyp zweimal
-  lahmgelegt, bevor er lief.
-
-## Erfolgsfaktoren
-
-- **Datensatz zuerst, reproduzierbar und dokumentiert.** Fester Seed, ein Generatorskript,
-  ein Prüfskript. Ohne das ist keine Aussage belastbar.
-- **Automatisierte Prüfungen von Anfang an.** Schema, Rechtskonformität, Erfüllbarkeit.
-- **Klein bleiben.** Eine Station, ein Monat, nur der Pflegedienst. Ärztliche
-  Dienstplanung ist ein eigenes Problemfeld und hätte den Rahmen gesprengt.
+- **Realitätsnähe kollidiert mit Recht.** Der Bundesdurchschnitt an Hilfskräften (17,6 %)
+  liegt über der PpUGV-Grenze für unseren Bereich (10 %). Die strengere Norm hat Vorrang.
+- **13 Annahmen** mussten als solche gekennzeichnet werden, weil sie nicht belegbar sind.
+- **Datensatz zuerst, reproduzierbar und dokumentiert** — fester Seed, Generator- und
+  Prüfskript. Ohne das ist keine Aussage belastbar.
+- **Klein bleiben.** Eine Station, ein Monat, nur der Pflegedienst.
 - **Datenschutz als Konstruktionsprinzip**, nicht als nachträgliche Prüfung.
 
 ## Werkzeuge
 
 Python mit pandas · **SciPy/HiGHS** für die Optimierung (kein kommerzieller Solver nötig)
-· Streamlit für die Oberfläche · GitHub und Streamlit Community Cloud für Versionierung
-und Betrieb. Rechenzeit: 10–16 Sekunden für einen kompletten 28-Tage-Plan, im Median unter
-einer Viertelsekunde für eine Umplanung.
+· Streamlit · GitHub und Streamlit Community Cloud. Rechenzeit: 10–16 Sekunden für einen
+28-Tage-Plan, im Median unter einer Viertelsekunde für eine Umplanung.
 
 ## Was wir gemessen haben — und was nicht
 
