@@ -17,10 +17,12 @@ evaluation_results.csv      Rohergebnisse der Kampagne (270 Pläne)
 ERGEBNISSE.md               Evaluation: Aufbau, Ergebnisse, Limitationen
 make_charts.py              Abbildungen aus den Kampagnendaten
 make_gantt.py               Gantt-Diagramm des Projektverlaufs (Termine anpassen!)
-make_deck.js                Präsentationsfolien (pptxgenjs)
+make_deck.js                Präsentationsfolien, ausführlich (16 Folien)
+make_kurzdeck.js            Präsentationsfolien, Kurzfassung (8 Folien)
 abbildungen/                erzeugte PNGs für Bericht und Präsentation (5 Abbildungen)
 HANDOUT.md                  zweiseitiges Handout für die Kommiliton:innen
 DATENKONZEPT.md             Begründung jeder Spalte und jedes Parameters mit Quellen
+PROJEKTUEBERSICHT.md        Gesamtdarstellung: Aufbau, Daten, Recht, Ergebnis
 ```
 
 ## Starten
@@ -91,7 +93,8 @@ python wochenend_analyse.py  # Verteilung der Wochenenddienste (~2 Min.)
 ```bash
 python make_charts.py   # Abbildungen aus evaluation_results.csv
 python make_gantt.py    # Gantt-Diagramm (Termine vorher in der Datei anpassen)
-node make_deck.js       # Praesentation_Schichtplanung.pptx
+node make_deck.js       # Praesentation_Schichtplanung.pptx (ausfuehrlich)
+node make_kurzdeck.js   # Kurzpraesentation_Schichtplanung.pptx (8 Folien)
 ```
 
 Beide Skripte laufen ohne Streamlit und geben Exit-Code 0 zurück, wenn alle harten
