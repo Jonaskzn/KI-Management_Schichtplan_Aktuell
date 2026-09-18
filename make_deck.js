@@ -301,8 +301,8 @@ chartSlide(s, "Ergebnis 1: Regelkonformität unter Knappheit",
   "Bei bedarfsgerechter Besetzung sind beide gleich gut. Der Unterschied entsteht erst, wenn es eng wird.",
   IMG("01_regelkonformitaet.png"), 1.451, [
     { t: "Bei 80 % Personaldecke", d: "war kein einziger Plan der Baseline vollständig regelkonform — gegenüber 100 % der optimierten Pläne." },
-    { t: "Im Mittel 4,3 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
-    { t: "Besetzungsquote", d: "95,4 % gegenüber 100,0 % — 104 unbesetzte Dienste gegenüber keinem." },
+    { t: "Im Mittel 4,7 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
+    { t: "Besetzungsquote", d: "95,2 % gegenüber 100,0 % — 92 unbesetzte Dienste gegenüber keinem." },
   ]);
 s.addNotes("Das ist die Kernfolie. Betonen: Der Mehrwert entsteht nicht im Normalbetrieb, sondern genau dort, wo es eng wird.");
 
@@ -323,7 +323,7 @@ chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
   "Zwei Befunde — einer über die Zielfunktion, einer über die Messung selbst.",
   IMG("03_planstabilitaet.png"), 2.003, [
     { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur 51 % der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 95 %." },
-    { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 14,9 statt 19,5 geänderte Dienste je Monat — ein Viertel weniger Umstellungen für die Mitarbeitenden." },
+    { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 14,9 statt 19,7 geänderte Dienste je Monat — ein Viertel weniger Umstellungen für die Mitarbeitenden." },
     { t: "Gegengeprüft", d: "Beide denselben Plan reparieren lassen: 95,0 % gegen 91,8 %. Nur aus einer Hand sinkt die Zahl auf 14,9." },
   ]);
 s.addNotes("Drei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war, deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste. Drittens, falls jemand nach einem gemeinsamen Ausgangsplan fragt - wir haben alle vier Kombinationen gerechnet. Geaenderte Dienste: Excel-Plan von Excel repariert 19,5. Excel-Plan von MILP 25,2. MILP-Plan von Excel 24,8. MILP-Plan von MILP 14,9. Zeilenweise aendert MILP immer mehr, weil es die Maengel des geerbten Plans mitbehebt. Nur die Diagonale erreicht 14,9 - der Vorteil ist systemisch, Planung und Anpassung gehoeren zusammen. Genau deshalb fragt die Leitfrage nach beidem.");
@@ -350,7 +350,7 @@ s.addText("Gemessen", {
 s.addText([
   { text: "Regelkonformität unter Knappheit: 100 % gegenüber 0 % der Pläne", options: { bullet: true, breakLine: true } },
   { text: "Ungleichverteilung der Last um Faktor fünf reduziert — aber nur ohne Ausfallwelle", options: { bullet: true, breakLine: true } },
-  { text: "Planänderungen je Monat: 14,9 statt 19,5 — ein Viertel weniger", options: { bullet: true, breakLine: true } },
+  { text: "Planänderungen je Monat: 14,9 statt 19,7 — ein Viertel weniger", options: { bullet: true, breakLine: true } },
   { text: "Umplanung in unter einer Sekunde", options: { bullet: true } },
 ], {
   x: M + 0.35, y: 2.75, w: 5.15, h: 2.9, isTextBox: true, margin: 0,

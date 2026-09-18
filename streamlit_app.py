@@ -475,11 +475,22 @@ with tabs[6]:
 
 #### Die beiden Verfahren
 
-**Regelbasiert (Baseline).** Geht Tag fuer Tag und Schicht fuer Schicht vor und
-waehlt jeweils die Person mit der geringsten bisherigen Auslastung, die alle
-harten Regeln erfuellt. Das entspricht dem Vorgehen einer manuellen
-Excel-Planung: schnell, nachvollziehbar, aber ohne Blick auf die Folgen einer
-Entscheidung fuer spaetere Tage.
+**Regelbasiert (Baseline).** Geht Tag fuer Tag und Schicht fuer Schicht vor
+(Nachtdienst zuerst, weil dort die wenigsten Personen infrage kommen) und waehlt
+jeweils die am wenigsten ausgelastete Person, die **alle harten Regeln** erfuellt.
+Geprueft werden bei jeder einzelnen Zuweisung: Abwesenheit und Krankmeldung,
+hoechstens ein Dienst je Person und Tag, Nachtdiensteignung, Stationsleitung nur
+im Fruehdienst, maximale Dienstfolge, vertragliche Hoechstarbeitszeit, Ruhezeit
+nach ArbZG §5 sowie die PpUGV-Vorgaben zu Fachkraftquote, Hilfskraftanteil und
+Anrechenbarkeit von Auszubildenden. Findet sich niemand, der alle Regeln
+erfuellt, bleibt der Dienst **offen** - die Baseline bricht keine Regel, um eine
+Luecke zu schliessen.
+
+*Weiche* Ziele kennt sie dagegen fast keine: Lastausgleich steckt in der
+Auswahlregel, der Wochenend-Richtwert nur als Tiebreaker, Dienstwuensche gar
+nicht. Genau das ist der Unterschied zur Optimierung - eine Excel-Planung hat
+keine Zielfunktion, sondern eine Reihenfolge und eine Faustregel, und kann
+konkurrierende Ziele deshalb nicht gegeneinander abwaegen.
 
 **MILP-Optimierung.** Formuliert die gesamte Periode als gemischt-ganzzahliges
 Programm und loest es mit HiGHS. Alle rechtlichen und vertraglichen Grenzen sind
@@ -494,9 +505,21 @@ historischen Planentscheidungen als Trainingsdaten - Machine Learning hat hier
 keinen Ansatzpunkt. Einschlaegig sind mathematische Optimierung und Constraint
 Programming (Burke et al. 2004; Van den Bergh et al. 2013).
 
+Ist das dann KI? Umgangssprachlich nicht - das Modell lernt nichts. Fachlich
+schon: Suche, Constraint-Erfuellung und Scheduling gehoeren seit den Anfaengen
+zum Kern der KI (Russell & Norvig 2021). Ausfuehrlich in `ERGEBNISSE.md`,
+Abschnitt 7.1.
+
 #### Methodischer Hinweis
 
 Die Bewertung in `evaluate()` prueft den fertigen Plan unabhaengig vom Planer
 nach. Ein Verfahren darf seine eigene Regelkonformitaet nicht selbst behaupten -
 sonst waere der KPI-Vergleich zirkulaer.
+
+Damit der Vergleich fair bleibt, behandeln **beide** Verfahren denselben
+Richtwert gleich: Der Nachtdienst-Richtwert ist eine gesetzte Annahme, keine
+gesetzliche Grenze, und wird von `evaluate()` als weiche Abweichung gezaehlt.
+Die Heuristik darf ihn deshalb ueberschreiten, bevor ein Dienst unbesetzt
+bleibt - genau wie das MILP, das ihn mit einem Strafgewicht statt einer harten
+Schranke modelliert.
 """, unsafe_allow_html=True)

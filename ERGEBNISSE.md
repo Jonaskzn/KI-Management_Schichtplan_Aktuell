@@ -53,7 +53,7 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | weiche Abweichungen | 15,7 ± 1,8 | 16,1 ± 1,0 | **0,0 ± 0,0** | 0,9 ± 1,0 |
 | Streuung Auslastung | 0,069 ± 0,012 | 0,083 ± 0,017 | **0,014 ± 0,004** | 0,057 ± 0,039 |
 | Planstabilität (eigener Ausgangsplan) | 72,6 % | 94,5 % | 48,5 % | 95,3 % |
-| Planungszeit | 0,41 s | 0,35 s | 8,79 s | 0,24 s |
+| Planungszeit | 0,40 s | 0,35 s | 8,74 s | 0,24 s |
 
 ### Knappe Besetzung (90 %, Ø 20 Köpfe)
 
@@ -65,19 +65,19 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 | weiche Abweichungen | 15,1 ± 1,4 | 14,9 ± 1,9 | **0,2 ± 0,4** | 1,7 ± 1,8 |
 | Streuung Auslastung | 0,059 ± 0,037 | 0,069 ± 0,038 | **0,017 ± 0,007** | 0,044 ± 0,024 |
 | Planstabilität (eigener Ausgangsplan) | 78,3 % | 93,5 % | 49,5 % | 95,9 % |
-| Planungszeit | 0,36 s | 0,30 s | 12,33 s | 0,34 s |
+| Planungszeit | 0,35 s | 0,30 s | 12,23 s | 0,33 s |
 
 ### Unterbesetzt (80 %, Ø 18 Köpfe)
 
 | Kennzahl | Greedy | Greedy reaktiv | MILP | MILP reaktiv |
 |---|---|---|---|---|
-| Besetzungsquote | 95,4 % | 95,3 % | **100,0 %** | **100,0 %** |
-| Untergrenzenverstöße | 4,33 ± 1,95 | 4,60 ± 1,88 | **0,00** | **0,00** |
-| harte Regelverstöße | 0,93 ± 1,39 | 1,20 ± 1,52 | **0,00** | **0,00** |
-| weiche Abweichungen | 14,1 ± 1,8 | 14,3 ± 2,0 | **2,9 ± 1,2** | 4,8 ± 1,9 |
-| Streuung Auslastung | 0,088 ± 0,022 | 0,094 ± 0,021 | **0,065 ± 0,036** | 0,086 ± 0,035 |
-| Planstabilität (eigener Ausgangsplan) | 78,8 % | 92,4 % | 54,8 % | 93,9 % |
-| Planungszeit | 0,32 s | 0,27 s | 15,49 ± 10,54 s | 0,46 s |
+| Besetzungsquote | 95,2 % | 95,2 % | **100,0 %** | **100,0 %** |
+| Untergrenzenverstöße | 4,73 ± 1,79 | 5,07 ± 2,09 | **0,00** | **0,00** |
+| harte Regelverstöße | 0,87 ± 1,36 | 1,20 ± 1,52 | **0,00** | **0,00** |
+| weiche Abweichungen | 16,2 ± 2,3 | 16,3 ± 2,4 | **2,9 ± 1,2** | 4,8 ± 1,9 |
+| Streuung Auslastung | 0,088 ± 0,021 | 0,094 ± 0,022 | **0,065 ± 0,036** | 0,086 ± 0,035 |
+| Planstabilität (eigener Ausgangsplan) | 78,5 % | 92,2 % | 54,8 % | 93,9 % |
+| Planungszeit | 0,32 s | 0,27 s | 15,38 ± 10,52 s | 0,45 s |
 
 ### Anteil vollständig regelkonformer Pläne
 
@@ -92,7 +92,7 @@ Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweic
 
 Über alle 135 MILP-Pläne hinweg gibt es **keinen einzigen** harten Regelverstoß, keine
 Untergrenzenunterschreitung und keinen unbesetzten Dienst. Die Heuristik lässt bei 80 %
-Decke insgesamt 104 Dienste unbesetzt und unterschreitet die Untergrenze 65-mal.
+Decke insgesamt 92 Dienste unbesetzt und unterschreitet die Untergrenze 71-mal.
 
 Die Zeile „Planstabilität" ist in diesen Tabellen bewusst nicht fett ausgezeichnet: Sie
 misst jedes Verfahren gegen seinen **eigenen** Ausgangsplan und ist deshalb zwischen den
@@ -116,11 +116,11 @@ verfälschen, und wird in Abschnitt 3.3 ausdrücklich kontrolliert.
 
 | Kennzahl | S0 | S1 | S2 |
 |---|---|---|---|
-| Spanne — Regelbasiert, Neuplanung | 0,283 | 0,302 | 0,329 |
+| Spanne — Regelbasiert, Neuplanung | 0,283 | 0,301 | 0,328 |
 | Spanne — MILP, Neuplanung | **0,122** | **0,140** | **0,163** |
-| Spanne — Regelbasiert, reaktiv | 0,283 | 0,338 | 0,380 |
+| Spanne — Regelbasiert, reaktiv | 0,283 | 0,337 | 0,379 |
 | Spanne — MILP, reaktiv | 0,122 | 0,275 | 0,377 |
-| offene Dienste — Regelbasiert, reaktiv | 2,27 | 2,53 | **3,87** |
+| offene Dienste — Regelbasiert, reaktiv | 2,00 | 2,40 | **3,73** |
 | harte Regelverstöße — Regelbasiert, reaktiv | 0,33 | 0,47 | **1,20** |
 
 Planstabilität fehlt in dieser Tabelle bewusst — sie gehört in Abschnitt 4, weil sie nur
@@ -129,7 +129,7 @@ auf identischem Ausgangsplan zwischen den Verfahren aussagekräftig ist.
 ### 3.2 Warum der Abstand bei der Spanne unter S2 klein wird
 
 In der reaktiven Betriebsart liegen beide Verfahren unter der Ausfallwelle bei der
-Lastverteilung dicht beieinander: Spanne 0,377 gegen 0,380. Das ist erklärungsbedürftig,
+Lastverteilung dicht beieinander: Spanne 0,377 gegen 0,379. Das ist erklärungsbedürftig,
 weil die Optimierung ohne Störung um den Faktor 2,3 besser verteilt (0,122 gegen 0,283).
 Drei Befunde ordnen das ein.
 
@@ -159,12 +159,12 @@ gegenüber (beide reaktiv, jeweils auf dem Plan der Optimierung):
 | Kennzahl unter S2 | Regelbasiert | MILP |
 |---|---|---|
 | Besetzungsquote | 99,3 % | **100,0 %** |
-| offene Dienste je Plan | 1,40 | **0,00** |
+| offene Dienste je Plan | 1,33 | **0,00** |
 | harte Regelverstöße je Plan | 0,53 | **0,00** |
-| weiche Abweichungen je Plan | 5,87 | **3,27** |
+| weiche Abweichungen je Plan | 6,00 | **3,27** |
 | Spanne der Auslastung | 0,382 | 0,377 |
-| Planstabilität | 87,3 % | **91,3 %** |
-| geänderte Zuweisungen | 39,1 | **26,2** |
+| Planstabilität | 87,2 % | **91,3 %** |
+| geänderte Zuweisungen | 39,2 | **26,2** |
 
 Auf der einen Kennzahl, die dicht beieinanderliegt, ist die Optimierung nicht schlechter.
 Auf allen übrigen ist der Abstand eindeutig. Unter der Ausfallwelle liegt ihr Mehrwert in
@@ -230,18 +230,18 @@ allein das Verfahren. Jedes tut also, was es real täte:
 
 | Kennzahl (Mittel über 45 Pläne) | Regelbasiert | MILP | |
 |---|---|---|---|
-| Planstabilität | 93,5 % | **95,0 %** | ✓ |
-| geänderte Zuweisungen je Plan | 19,5 | **14,9** | ✓ |
+| Planstabilität | 93,4 % | **95,0 %** | ✓ |
+| geänderte Zuweisungen je Plan | 19,7 | **14,9** | ✓ |
 | Besetzungsquote | 98,2 % | **100,0 %** | ✓ |
-| offene Dienste | 2,89 | **0,00** | ✓ |
-| Untergrenzenverstöße | 1,69 | **0,00** | ✓ |
+| offene Dienste | 2,71 | **0,00** | ✓ |
+| Untergrenzenverstöße | 1,84 | **0,00** | ✓ |
 | harte Regelverstöße | 0,67 | **0,00** | ✓ |
-| weiche Abweichungen | 15,1 | **2,47** | ✓ |
+| weiche Abweichungen | 15,8 | **2,47** | ✓ |
 | Spanne der Auslastung | 0,333 | **0,258** | ✓ |
 
 **Die Optimierung gewinnt jede einzelne Kennzahl.** Entscheidend ist, dass Planstabilität
-und absolute Änderungszahl **in dieselbe Richtung** zeigen: 95,0 % gegen 93,5 % bei
-gleichzeitig 14,9 gegen 19,5 geänderten Diensten. Ginge nur der Prozentwert zugunsten der
+und absolute Änderungszahl **in dieselbe Richtung** zeigen: 95,0 % gegen 93,4 % bei
+gleichzeitig 14,9 gegen 19,7 geänderten Diensten. Ginge nur der Prozentwert zugunsten der
 Optimierung aus, wäre der Einwand berechtigt, die beiden Werte bezögen sich auf
 unterschiedliche Ausgangspläne. Da auch die absolute Zahl geänderter Dienste niedriger ist,
 trägt die Aussage: **Die Mitarbeitenden erleben in der KI-Welt rund ein Viertel weniger
@@ -281,15 +281,15 @@ Die Optimierung bleibt in jeder Kennzahl vorn; unter der Ausfallwelle ist sie in
 
 | Kennzahl | Regelbasiert repariert | MILP repariert |
 |---|---|---|
-| Planstabilität | **93,5 %** | 91,7 % |
-| geänderte Zuweisungen | **19,5** | 25,2 |
-| Spanne der Auslastung | **0,333** | 0,354 |
+| Planstabilität | **93,4 %** | 91,5 % |
+| geänderte Zuweisungen | **19,7** | 25,8 |
+| Spanne der Auslastung | **0,333** | 0,362 |
 | harte Regelverstöße | 0,67 | **0,00** |
-| Untergrenzenverstöße | 1,69 | **0,00** |
-| offene Dienste | 2,89 | **0,00** |
+| Untergrenzenverstöße | 1,84 | **0,00** |
+| offene Dienste | 2,71 | **0,00** |
 
 Hier ändert die Optimierung **mehr**. Das ist kein Qualitätsmangel, sondern eine logische
-Folge: Die 2,89 unbesetzten Dienste und 1,69 Untergrenzenverstöße im geerbten Plan lassen
+Folge: Die 2,71 unbesetzten Dienste und 1,84 Untergrenzenverstöße im geerbten Plan lassen
 sich nur beheben, **indem** Zuweisungen geändert werden. Ein Verfahren, das sie stehen
 lässt, gewinnt die Stabilitätskennzahl durch Untätigkeit. Wer einen schlechten Plan erbt,
 muss ihn anfassen, um ihn rechtskonform zu machen.
@@ -302,7 +302,7 @@ Plan:
 
 | | repariert von der Heuristik | repariert von der Optimierung |
 |---|---|---|
-| **Ausgangsplan der Heuristik** | 19,5 | 25,2 |
+| **Ausgangsplan der Heuristik** | 19,7 | 25,8 |
 | **Ausgangsplan der Optimierung** | 24,8 | **14,9** |
 
 Zwei Ablesungen:
@@ -315,7 +315,7 @@ gleich welcher — kann die Optimierung auf dieser Kennzahl deshalb nie vorn seh
 **Diagonal** zeigt sich der eigentliche Befund: Nur die Kombination „Optimierung plant und
 Optimierung repariert" erreicht 14,9. Ein guter Plan, von der Heuristik repariert, kostet
 mit 24,8 Änderungen **mehr** als der schwache Plan der Heuristik in ihrer eigenen Hand
-(19,5) — weil ein dicht gepackter Plan ohne Slack von einer lokal entscheidenden Heuristik
+(19,7) — weil ein dicht gepackter Plan ohne Slack von einer lokal entscheidenden Heuristik
 nicht effizient repariert werden kann. Der Vorteil steckt also **weder in der Planung noch
 in der Anpassung allein, sondern im Zusammenspiel**: Die Optimierung baut einen Plan, der
 Spielraum an den richtigen Stellen lässt, und weiß zugleich, wie sie ihn nutzt.
@@ -355,8 +355,8 @@ Besetzung erreichen beide Verfahren nahezu die Sollbesetzung. Sobald die Persona
 sinkt, trennen sich die Verfahren deutlich.
 
 **Unter Knappheit sichert nur die Optimierung die gesetzliche Untergrenze.** Bei 80 %
-Personaldecke unterschreitet die Heuristik die Pflegepersonaluntergrenze im Mittel 4,3-mal
-je Plan und lässt insgesamt 104 Dienste unbesetzt; die Optimierung kommt auf null
+Personaldecke unterschreitet die Heuristik die Pflegepersonaluntergrenze im Mittel 4,7-mal
+je Plan und lässt insgesamt 92 Dienste unbesetzt; die Optimierung kommt auf null
 Untergrenzenverstöße und null unbesetzte Dienste über alle 15 Pläne hinweg. **Kein einziger
 Greedy-Plan bei 80 % war vollständig regelkonform, 100 % der MILP-Pläne waren es.** Das ist
 das betriebswirtschaftlich relevanteste Ergebnis: Der Mehrwert der Optimierung entsteht
@@ -372,15 +372,15 @@ Vorsprung weitgehend auf, weil die Zielfunktion sie dazu anhält (Abschnitt 3.2)
 **Die reaktive Umplanung ist der größte Einzeleffekt.** Eine vollständige Neuplanung nach
 Ausfällen erhält nur rund die Hälfte des Plans (MILP 48,5–54,8 %) und ändert im Mittel 277
 Zuweisungen. Die reaktive Variante hält 93,9–95,9 % Planstabilität bei Ø 15 Änderungen und
-rechnet in 0,16 s im Median (Maximum 2,89 s), bei unveränderter Besetzungsquote und ohne
+rechnet in 0,16 s im Median (Maximum 2,79 s), bei unveränderter Besetzungsquote und ohne
 zusätzliche Regelverstöße. Für die Mitarbeitenden ist das der Unterschied zwischen „einige
 Dienste ändern sich" und „der Monat wird neu gemacht". Dieser Vergleich ist innerhalb eines
 Verfahrens gezogen und deshalb von der Frage aus Abschnitt 4 nicht betroffen.
 
 **Im End-to-End-Vergleich gewinnt die Optimierung jede Kennzahl.** Gegenüber der
-Excel-Welt: 100 % statt 98,2 % Besetzung, null statt 2,89 offene Dienste, null statt 1,69
-Untergrenzenverstöße, 2,5 statt 15,1 weiche Abweichungen, Spanne 0,258 statt 0,333 — und
-dabei 14,9 statt 19,5 geänderte Dienste je Plan bei 95,0 % statt 93,5 % Planstabilität
+Excel-Welt: 100 % statt 98,2 % Besetzung, null statt 2,71 offene Dienste, null statt 1,84
+Untergrenzenverstöße, 2,5 statt 15,8 weiche Abweichungen, Spanne 0,258 statt 0,333 — und
+dabei 14,9 statt 19,7 geänderte Dienste je Plan bei 95,0 % statt 93,4 % Planstabilität
 (Abschnitt 4.1).
 
 **Der Preis der Stabilität ist messbar.** Die reaktive Variante erkauft sich die
@@ -388,8 +388,8 @@ Planstabilität mit schlechterer Lastverteilung (Streuung 0,057 statt 0,014 bei 
 Decke) und einzelnen weichen Abweichungen (0,9 statt 0,0). Das ist kein Mangel, sondern
 der Zielkonflikt selbst — der Prototyp macht ihn quantifizierbar, statt ihn zu verstecken.
 
-**Rechenzeit ist kein limitierender Faktor.** Die Optimierung braucht 8,8 s bei
-bedarfsgerechter und 15,5 s bei knapper Besetzung; in 7 von 135 Läufen (5 %) griff das
+**Rechenzeit ist kein limitierender Faktor.** Die Optimierung braucht 8,7 s bei
+bedarfsgerechter und 15,4 s bei knapper Besetzung; in 6 von 135 Läufen (4 %) griff das
 Zeitlimit von 30 s, ohne dass die Ergebnisqualität erkennbar litt — auch diese Pläne sind
 vollständig regelkonform. Die Umplanung liegt im Median bei 0,16 s.
 
@@ -414,7 +414,7 @@ konsistenter, schneller und ermüdungsfrei. Der Unterschied zu manueller Planung
 größer sein als hier gemessen — belegen lässt sich das mit diesem Aufbau nicht.
 
 **Fünf Seeds sind wenig.** Die Streuungen tragen die Kernaussagen zur Regelkonformität
-(Untergrenzenverstöße bei 80 %: Greedy 4,33 ± 1,95 gegen MILP 0,00 ± 0,00). Für die
+(Untergrenzenverstöße bei 80 %: Greedy 4,73 ± 1,79 gegen MILP 0,00 ± 0,00). Für die
 Szenarienanalyse in Abschnitt 3.3 steht nur eine Teilmenge von 6 Instanzen zur Verfügung —
 zu wenig für inferenzstatistische Aussagen. Ein Signifikanztest wird bewusst nicht
 gerechnet.
@@ -497,6 +497,55 @@ bräuchte es echte historische Betriebsdaten; unsere Daten sind synthetisch, ein
 trainiertes Modell würde nur die eigenen Generatorannahmen zurückgeben. Der Punkt gehört in
 den Ausblick, nicht in die Ergebnisse.
 
+### 7.3 Fairness der Baseline
+
+Ein Verfahrensvergleich taugt nur so viel wie seine Baseline. Wird sie strenger behandelt
+als das Verfahren, das sie schlagen soll, misst man den eigenen Aufbau statt der Methode.
+Eine solche Asymmetrie war zunächst im Code:
+
+Der **Nachtdienst-Richtwert** (höchstens 8 Nachtdienste in vier Wochen) ist eine gesetzte
+Annahme, keine gesetzliche Grenze — er ist arbeitswissenschaftlich gestützt, aber im ArbZG
+nicht beziffert (siehe `DATENKONZEPT.md`, Annahme A10). `evaluate()` zählt seine
+Überschreitung folgerichtig als **weiche** Abweichung. Das MILP modelliert ihn ebenfalls
+weich, mit einem Strafgewicht von 30. Die Heuristik behandelte ihn jedoch als **harte**
+Sperre: Wer sein Kontingent ausgeschöpft hatte, kam für den Nachtdienst nicht mehr infrage —
+auch dann nicht, wenn der Dienst sonst unbesetzt geblieben wäre.
+
+Die Folge war eine Ungleichbehandlung: Das MILP durfte eine weiche Überschreitung in Kauf
+nehmen, um einen Dienst zu besetzen (Strafe 30 gegen 1.000 für Unterbesetzung), die
+Heuristik nicht. Da eine reale Stationsleitung in dieser Lage den internen Richtwert
+überschreiten und nicht die Schicht leer lassen würde, war die Baseline damit strenger
+modelliert als die Wirklichkeit — und strenger als ihr Konkurrent.
+
+**Korrektur.** Die Heuristik darf den Nachtdienst-Richtwert seit dieser Version
+überschreiten, wenn andernfalls ein Dienst unbesetzt bliebe. Sie versucht zuerst eine
+richtwertkonforme Besetzung und greift erst im zweiten Durchgang auf Personen zurück, die
+ihr Kontingent bereits ausgeschöpft haben. Die Überschreitung wird von `evaluate()` normal
+als weiche Abweichung gezählt.
+
+**Wirkung, über alle 15 Instanzen und drei Szenarien gemessen:**
+
+| Heuristik, Neuplanung | Richtwert hart | Richtwert weich |
+|---|---|---|
+| Besetzungsquote | 98,3 % | 98,3 % |
+| offene Dienste je Plan | 2,49 | **2,22** |
+| Untergrenzenverstöße je Plan | **1,58** | 1,71 |
+| harte Regelverstöße je Plan | 0,44 | **0,42** |
+| weiche Abweichungen je Plan | **14,9** | 15,6 |
+
+Bei 90 % und 100 % Personaldecke ändert sich **nichts** — dort wird der Richtwert nie
+bindend. Bei 80 % sinken die offenen Dienste über alle Instanzen von 104 auf 92, dafür
+steigen die Untergrenzenverstöße von 65 auf 71 und die weichen Abweichungen von 14,1 auf
+16,2 je Plan. Die Heuristik besetzt also mehr Dienste, erkauft das aber mit mehr
+Richtwertüberschreitungen und trifft dabei stellenweise schlechtere Folgeentscheidungen —
+erneut die in Abschnitt 3.4 beschriebene Nicht-Monotonie.
+
+**Bewertung.** Die Korrektur verschiebt die Baseline in beide Richtungen und ändert das
+Gesamtbild nicht: Die Heuristik bleibt bei 80 % Decke in **keinem einzigen** Plan
+vollständig regelkonform, das MILP in **allen**. Der Befund hängt also nicht an dieser
+Modellierungsentscheidung. Berichtet werden durchgängig die Zahlen der korrigierten
+Variante.
+
 ---
 
 ## 8. Business Impact
@@ -504,26 +553,26 @@ den Ausblick, nicht in die Ergebnisse.
 **Gemessen** (gilt für diese 15 Instanzen):
 
 - Bei knapper Personaldecke sichert die Optimierung die gesetzliche Mindestbesetzung, die
-  Heuristik nicht: 0 gegen 4,3 Untergrenzenverstöße je Plan bei 80 % Decke; 100 % gegen
+  Heuristik nicht: 0 gegen 4,7 Untergrenzenverstöße je Plan bei 80 % Decke; 100 % gegen
   0 % vollständig regelkonforme Pläne.
 - Gleichmäßigere Belastung im Normalbetrieb: Streuung der Auslastung um Faktor 5 geringer,
   Spanne von 33 auf 7 Prozentpunkte, alle Wochenend- und Nachtdienst-Richtwerte eingehalten.
 - Reaktion auf Ausfälle: Auf demselben Ausgangsplan hält die Optimierung 95,0 %
   Planstabilität gegen 91,8 % der Heuristik und braucht dafür 14,9 statt 24,8 Änderungen —
-  bei null Regelverstößen und null unbesetzten Diensten gegen 0,22 und 0,73. Die Umplanung
+  bei null Regelverstößen und null unbesetzten Diensten gegen 0,22 und 0,71. Die Umplanung
   läuft im Median in 0,16 s.
 
 **Gemessen, aber mit Zielkonflikt:** In der reaktiven Betriebsart liegt die Spanne der
-Optimierung unter der Ausfallwelle gleichauf mit der Heuristik (0,376 gegen 0,380) — nicht
+Optimierung unter der Ausfallwelle gleichauf mit der Heuristik (0,377 gegen 0,379) — nicht
 weil die Welle den Spielraum nähme, sondern weil die Vorgabe „möglichst wenig ändern" das
 Umverteilen unterbindet. Bei vollständiger Neuplanung hält die Optimierung auch unter der
-Welle 0,164. Gleichmäßigere Belastung *und* maximale Planstabilität sind nicht gleichzeitig
+Welle 0,163. Gleichmäßigere Belastung *und* maximale Planstabilität sind nicht gleichzeitig
 zu haben; welches Ziel schwerer wiegt, ist eine Managemententscheidung.
 
 **Der Effizienzvorteil ist an die durchgängige Nutzung gebunden.** Übernimmt die
 Optimierung nur die Anpassung bestehender Excel-Pläne, sichert sie weiterhin
-Rechtskonformität und Besetzung (null statt 0,67 harte Verstöße, null statt 2,89 offene
-Dienste), braucht dafür aber 25,2 statt 19,5 Änderungen. Der Rückgang auf 14,9 Änderungen
+Rechtskonformität und Besetzung (null statt 0,67 harte Verstöße, null statt 2,71 offene
+Dienste), braucht dafür aber 25,8 statt 19,7 Änderungen. Der Rückgang auf 14,9 Änderungen
 stellt sich erst ein, wenn auch die Monatsplanung aus dem System kommt (Abschnitt 4.3). Für
 eine Einführungsentscheidung heißt das: Eine reine „Feuerwehr"-Nutzung hebt den
 Rechtssicherheitsnutzen, nicht den Entlastungsnutzen.
@@ -568,14 +617,14 @@ Nach dieser Kampagne lässt sich die Antwort präzisieren:
    nur, wenn Stabilität ausdrücklich als Ziel modelliert wird. Eine bloße Neuoptimierung
    nach dem Ausfall ist für die Mitarbeitenden schlechter als die Heuristik.
 3. **Die beiden Ziele schließen einander teilweise aus.** Unter einer gebündelten
-   Ausfallwelle erreicht die Optimierung entweder eine gleichmäßige Last (Spanne 0,164 bei
+   Ausfallwelle erreicht die Optimierung entweder eine gleichmäßige Last (Spanne 0,163 bei
    vollständiger Neuplanung) oder einen stabilen Plan (91 % unveränderte Dienste), nicht
    beides zugleich. Die Regelkonformität bleibt in jedem Fall erhalten.
 
 4. **Erstellung und Anpassung sind nicht trennbar.** Die Vier-Felder-Tafel in Abschnitt 4.3
    zeigt, dass der Effizienzvorteil nur entsteht, wenn beide Schritte aus demselben System
-   kommen: 14,9 geänderte Dienste je Plan gegenüber 19,5 in der Excel-Welt — während
-   dieselbe Optimierung auf einem geerbten Excel-Plan 25,2 Änderungen braucht. Die Leitfrage
+   kommen: 14,9 geänderte Dienste je Plan gegenüber 19,7 in der Excel-Welt — während
+   dieselbe Optimierung auf einem geerbten Excel-Plan 25,8 Änderungen braucht. Die Leitfrage
    fragt zu Recht nach beidem zusammen.
 
 Punkt 2 ist der methodische Kernbefund der Arbeit: Nicht „Optimierung schlägt Heuristik",

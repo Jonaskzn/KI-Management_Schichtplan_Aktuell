@@ -69,7 +69,7 @@ optimierten Pläne. Wer nur eine bequeme Instanz rechnet, misst nichts.
 Nach einem Ausfall neu zu optimieren erhielt nur 51 % der Dienste — schlechter als die
 simple Heuristik. Erst als „möglichst wenig ändern" ausdrücklich ins Modell kam, stieg die
 Stabilität auf 95 %. Der Preis dafür ist sichtbar: Unter der Ausfallwelle liegt die
-Lastverteilung dann gleichauf mit der Heuristik (Spanne 0,377 gegen 0,380), während
+Lastverteilung dann gleichauf mit der Heuristik (Spanne 0,377 gegen 0,379), während
 vollständige Neuplanung 0,163 erreicht. Gewicht 200 für „nicht ändern" gegen 0,02 für
 Lastausgleich — gleichmäßige Last **oder** stabiler Plan, unter Druck ist beides zugleich
 nicht zu haben. Welches Ziel gewinnt, ist eine Führungsentscheidung, keine technische.
@@ -86,8 +86,8 @@ tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
 **6. Der Vorteil steckt in der Kette, nicht in einem Schritt.**
 Wir haben alle vier Kombinationen aus Ausgangsplan und Reparaturverfahren gerechnet
-(geänderte Dienste je Monat): Excel-Plan von Excel repariert **19,5** · Excel-Plan von MILP
-**25,2** · MILP-Plan von Excel **24,8** · MILP-Plan von MILP **14,9**. Auf jedem geerbten
+(geänderte Dienste je Monat): Excel-Plan von Excel repariert **19,7** · Excel-Plan von MILP
+**25,8** · MILP-Plan von Excel **24,8** · MILP-Plan von MILP **14,9**. Auf jedem geerbten
 Plan ändert die Optimierung *mehr* — weil sie dessen offene Dienste und Regelverstöße
 mitbehebt. Nur wenn Planung **und** Anpassung aus demselben System kommen, sinkt der Wert.
 Für die Praxis: Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die
@@ -112,6 +112,8 @@ Nur den berichten wir.
 - **Datensatz zuerst, reproduzierbar und dokumentiert** — fester Seed, Generator- und
   Prüfskript. Ohne das ist keine Aussage belastbar.
 - **Klein bleiben.** Eine Station, ein Monat, nur der Pflegedienst.
+- **Die Baseline muss fair konfiguriert sein.** Nachtdienst-Richtwert in der Heuristik
+  hart, im Optimierer weich — korrigiert und nachgemessen, Gesamtbild unverändert.
 - **Datenschutz als Konstruktionsprinzip**, nicht als nachträgliche Prüfung.
 
 ## Werkzeuge
@@ -122,9 +124,9 @@ Python mit pandas · **SciPy/HiGHS** für die Optimierung (kein kommerzieller So
 
 ## Was wir gemessen haben — und was nicht
 
-**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,3
+**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,7
 Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 33 auf 7
-Prozentpunkte), Planstabilität nach Ausfällen (95,0 % gegen 93,5 % bei 14,9 statt 19,5
+Prozentpunkte), Planstabilität nach Ausfällen (95,0 % gegen 93,4 % bei 14,9 statt 19,7
 geänderten Diensten), der Zielkonflikt zwischen Lastverteilung und Stabilität, Rechenzeit.
 
 **Nicht gemessen, nur plausibel:** Reduktion des manuellen Planungsaufwands, Wirkung auf

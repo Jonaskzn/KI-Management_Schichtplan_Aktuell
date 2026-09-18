@@ -201,7 +201,8 @@ class PlanResult:
 
 def plan_greedy(ctx: Context, scenario: str,
                 manual_absences: set[tuple[str, date]] | None = None,
-                fixed: dict[tuple[str, date], str] | None = None) -> PlanResult:
+                fixed: dict[tuple[str, date], str] | None = None,
+                soft_night: bool = True) -> PlanResult:
     """
     Regelbasierte Referenzplanung. Entspricht dem Vorgehen einer manuellen
     Excel-Planung: Tag fuer Tag, Schicht fuer Schicht, jeweils die Person mit
@@ -241,7 +242,7 @@ def plan_greedy(ctx: Context, scenario: str,
     assignments: dict[tuple[str, date], str] = {}
     open_slots: list[dict] = []
 
-    def eligible(e: str, d: date, s: str) -> bool:
+    def eligible(e: str, d: date, s: str, relax_night: bool = False) -> bool:
         row = st.loc[e]
         if (e, d) in blocked or (e, d) in assignments:
             return False
@@ -251,7 +252,13 @@ def plan_greedy(ctx: Context, scenario: str,
             return False
         if consec[e] >= int(row["max_consecutive_shifts"]):
             return False
-        if s == "N" and nights[e] >= int(row["max_night_shifts"]):
+        # Der Nachtdienst-Richtwert ist eine weiche Vorgabe ([ANNAHME] A10), keine
+        # gesetzliche Grenze - evaluate() zaehlt seine Ueberschreitung als weiche
+        # Abweichung. Die Heuristik darf ihn deshalb ueberschreiten, wenn sonst ein
+        # Dienst unbesetzt bliebe. Ohne diese Moeglichkeit waere die Baseline
+        # kuenstlich schwaecher als das MILP, das denselben Richtwert weich
+        # modelliert - der Verfahrensvergleich waere dann nicht fair.
+        if s == "N" and not relax_night and nights[e] >= int(row["max_night_shifts"]):
             return False
         if worked[e] + ctx.shifts[s]["net"] > int(row["max_total_minutes"]):
             return False
@@ -317,6 +324,23 @@ def plan_greedy(ctx: Context, scenario: str,
                         continue
                     pick = e
                     break
+                if pick is None and soft_night and s == "N":
+                    # Zweiter Versuch: Richtwert fuer Nachtdienste zuruecknehmen,
+                    # bevor der Dienst unbesetzt bleibt.
+                    relaxed = sorted(
+                        (e for e in st.index
+                         if int(st.loc[e, "ppug_countable"]) == 1
+                         and e not in placed
+                         and eligible(e, d, s, relax_night=True)),
+                        key=lambda e: score(e, d))
+                    for e in relaxed:
+                        is_fach = st.loc[e, "ppug_category"] == "Pflegefachkraft"
+                        if not is_fach and (need_fach - fach) >= remaining:
+                            continue
+                        if not is_fach and helpers >= max_help:
+                            continue
+                        pick = e
+                        break
                 if pick is None:
                     open_slots.append({"date": d, "shift_id": s,
                                        "slot": len(placed) + 1,
