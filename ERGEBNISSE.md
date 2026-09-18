@@ -358,12 +358,15 @@ man die 45 Pläne danach auf, ob die Heuristik überhaupt Lücken lässt:
 | Heuristik besetzt vollständig (19 Pläne) | 0,314 | 0,321 | 0,00 |
 | Heuristik lässt Lücken (26 Pläne) | 0,347 | **0,381** | 4,69 |
 
-Wo beide dieselbe Arbeitsmenge verteilen, ist die Spanne praktisch gleich — die Optimierung
-liegt dort in nur 7 von 19 Plänen höher, also im Bereich des Zufalls. Der sichtbare
-Rückstand entsteht fast vollständig dort, wo die Optimierung **zusätzlich 4,69 Dienste
-besetzt**, die die Heuristik offen lässt. Diese Arbeit muss jemand übernehmen, und das hebt
-die Spitzenauslastung. Die Heuristik „gewinnt" diese Kennzahl, indem sie die Arbeit nicht
-tut.
+Der Rückstand im Mittel entsteht überwiegend dort, wo die Optimierung **zusätzlich 4,69
+Dienste besetzt**, die die Heuristik offen lässt. Diese Arbeit muss jemand übernehmen, und
+das hebt die Spitzenauslastung. Insoweit „gewinnt" die Heuristik diese Kennzahl, indem sie
+die Arbeit nicht tut.
+
+**Das erklärt aber nicht alles.** Betrachtet man nur die 11 gestörten Pläne ohne
+Deckungsunterschied, ist das Bild szenarienabhängig: Unter S1 ist die Optimierung in 4 von 6
+Fällen besser, unter **S2 dagegen in 5 von 5 schlechter** (im Mittel +0,064 Spanne). Der
+Rest ist also kein Zufallsrauschen, sondern hat eine systematische zweite Ursache.
 
 **Zweitens: die Gewichtung.** Der verbleibende Rest hat eine klare Ursache in der
 Zielfunktion. `keep` = 200 je beibehaltener Zuweisung steht gegen `fair` = 0,02 je Minute
@@ -403,14 +406,42 @@ Unterschied zwischen zwanzig und über hundert Umstellungen im Monat.
 
 Bemerkenswert ist die **Schwelle**: Zwischen `keep` = 50 und `keep` = 20 kippt das Verhalten
 abrupt von „Lücken füllen" zu „Monat umverteilen". Dazwischen gibt es kaum einen sanften
-Übergang. Wer das Gewicht in der Praxis einstellt, wählt also faktisch zwischen zwei
-Betriebsarten, nicht auf einer stufenlosen Skala.
+Übergang.
+
+**Die zweite Stellschraube ist besser dosierbar.** Statt `keep` zu senken, lässt sich
+`fair` anheben — das Gewicht je Minute Abweichung von der Zielarbeitszeit. Dieselben
+Instanzen, `keep` konstant bei 200:
+
+| Konfiguration | Spanne | Planstabilität | Änderungen |
+|---|---|---|---|
+| Regelbasiert (Referenz) | 0,391 | 91,4 % | 26,2 |
+| MILP, `fair` = 0,02 *(Standard)* | 0,478 | **93,4 %** | **19,8** |
+| MILP, `fair` = 0,1 | **0,276** | 91,3 % | 26,8 |
+| MILP, `fair` = 0,3 | 0,273 | 91,4 % | 26,6 |
+| MILP, `fair` = 1,0 | **0,083** | 89,4 % | 32,8 |
+| MILP, `fair` = 3,0 | 0,077 | 87,4 % | 39,0 |
+
+Bei `fair` = 0,1 erreicht die Optimierung eine **um 29 % bessere Lastverteilung als die
+Heuristik (0,276 gegen 0,391) bei praktisch identischer Planstabilität** (91,3 % gegen
+91,4 %) und gleicher Änderungszahl (26,8 gegen 26,2). Die Behauptung, es handle sich um eine
+unausweichliche Pareto-Grenze, ist damit **widerlegt**: Der Rückstand bei der Spanne ist
+keine Eigenschaft des Verfahrens, sondern die Folge eines Gewichts, das faktisch bei null
+lag. Eine Person um 500 Minuten besser auszulasten war 10 Punkte wert, eine Zuweisung zu
+behalten 200.
+
+Warum der Standard trotzdem bei 0,02 bleibt: Die veröffentlichten Kampagnenzahlen sind mit
+diesem Wert gerechnet, und eine Gewichtsänderung nach Sichtung der Ergebnisse wäre
+ergebnisgetriebenes Tuning. Stattdessen macht der Prototyp die Wahl **explizit**: Die
+Anwendung bietet die drei Stufen „Planungsruhe" (0,02), „Ausgewogen" (0,1) und
+„Verteilungsgerechtigkeit" (1,0) zur Auswahl an. Die Entscheidung gehört ohnehin nicht in
+eine Konfigurationsdatei, sondern auf die Leitungsebene.
 
 **Konsequenz für die Interpretation.** Die Spanne der reaktiven Optimierung darf nicht als
-Leistungsgrenze gelesen werden. Sie ist das Ergebnis einer bewussten Priorisierung, und
-diese Priorisierung ist eine Führungsentscheidung: Wer Planungsruhe für die Mitarbeitenden
-höher gewichtet als Verteilungsgerechtigkeit, bekommt `keep` = 200. Wer es umgekehrt sieht,
-stellt es um — und bekommt messbar das andere Ergebnis.
+Leistungsgrenze gelesen werden. Alle Stellen dieser Auswertung, an denen die Optimierung bei
+der Lastverteilung hinter der Heuristik liegt, gehen auf die Gewichtung `fair` = 0,02 zurück
+und verschwinden bei 0,1. Sie sind ein Kalibrierungsbefund, kein Verfahrensbefund — und
+genau das ist der methodische Kern: Ein Optimierer tut, was in der Zielfunktion steht, nicht
+was man sich davon erhofft.
 
 ### 4.6 Was daraus folgt
 

@@ -38,6 +38,16 @@ METHODS = {
     "MILP-Optimierung": "milp",
 }
 
+# Gewicht fuer Lastausgleich in der Zielfunktion (je Minute Abweichung von der
+# Zielarbeitszeit). Der Standardwert 0,02 steht gegen keep = 200 je beibehaltener
+# Zuweisung - Lastausgleich faellt damit praktisch nicht ins Gewicht. Der zweite
+# Wert dreht die Priorisierung um. Wirkung quantifiziert in ERGEBNISSE.md 4.5.
+PRIORITAETEN = {
+    "Planungsruhe (Standard)": 0.02,
+    "Ausgewogen": 0.1,
+    "Verteilungsgerechtigkeit": 1.0,
+}
+
 st.set_page_config(page_title="CarePlan | Schichtplanung", page_icon="+", layout="wide")
 
 st.markdown("""<style>
@@ -131,11 +141,26 @@ with st.sidebar:
              "werden minimiert (Planstabilitaet). Aus: der Plan wird "
              "vollstaendig neu gerechnet.")
     if method == "milp":
+        prio_label = st.radio(
+            "Priorität der Optimierung",
+            list(PRIORITAETEN), index=0,
+            help="Stellt das Gewicht fuer Lastausgleich in der Zielfunktion "
+                 "(je Minute Abweichung von der Zielarbeitszeit, gegen 200 je "
+                 "beibehaltener Zuweisung). "
+                 "Planungsruhe (0,02): nur Luecken fuellen - hoechste "
+                 "Planstabilitaet, eine geerbte Schieflage bleibt bestehen. "
+                 "Ausgewogen (0,1): deutlich gleichmaessigere Auslastung bei "
+                 "praktisch unveraenderter Stabilitaet - im Mittel der beste "
+                 "Kompromiss. Verteilungsgerechtigkeit (1,0): die Last wird im "
+                 "ganzen Monat neu verteilt, dafuer mehr geaenderte Dienste. "
+                 "Gemessene Wirkung in ERGEBNISSE.md, Abschnitt 4.5.")
+        prio = PRIORITAETEN[prio_label]
         time_limit = st.slider("Rechenzeit je Plan (Sekunden)", 5, 120, 30, step=5,
                                help="Abbruchgrenze fuer den Solver. Wird die "
                                     "Grenze erreicht, liefert er die beste bis "
                                     "dahin gefundene Loesung.")
     else:
+        prio_label, prio = list(PRIORITAETEN)[0], PRIORITAETEN[list(PRIORITAETEN)[0]]
         time_limit = 30
 
     st.markdown("### Zusaetzlicher Ausfall")
@@ -164,12 +189,18 @@ manual_key = tuple(sorted(st.session_state.manual))
 # Planung (mit Zwischenspeicher, damit der Solver nicht bei jedem Klick laeuft)
 # --------------------------------------------------------------------------
 
-def compute(method: str, scenario: str, manual_set, reference=None, limit=30):
+def compute(method: str, scenario: str, manual_set, reference=None, limit=30,
+            fair: float | None = None):
     if method == "greedy":
         return P.plan_greedy(ctx, scenario, manual_absences=manual_set,
                              fixed=reference.assignments if reference else None)
+    weights = None
+    if fair is not None and fair != P.WEIGHTS["fair"]:
+        weights = dict(P.WEIGHTS)
+        weights["fair"] = float(fair)
     return P.plan_milp(ctx, scenario, manual_absences=manual_set,
-                       reference=reference, time_limit_s=float(limit))
+                       reference=reference, time_limit_s=float(limit),
+                       weights=weights)
 
 
 def cached(key, factory):
@@ -179,19 +210,20 @@ def cached(key, factory):
     return store[key]
 
 
-ref_key = (data_key, method, "REF", (), time_limit)
+ref_key = (data_key, method, "REF", (), time_limit, prio)
 with st.spinner("Referenzplan wird berechnet ..."):
     reference = cached(ref_key, lambda: compute(method, REFERENCE_SCENARIO, set(),
-                                                limit=time_limit))
+                                                limit=time_limit, fair=prio))
 
-cur_key = (data_key, method, scenario, manual_key, reactive, time_limit)
+cur_key = (data_key, method, scenario, manual_key, reactive, time_limit, prio)
 is_reference = (scenario == REFERENCE_SCENARIO and not manual)
 if is_reference and not reactive:
     current = reference
 else:
     with st.spinner("Plan wird berechnet ..."):
         current = cached(cur_key, lambda: compute(
-            method, scenario, manual, reference if reactive else None, time_limit))
+            method, scenario, manual, reference if reactive else None, time_limit,
+            fair=prio))
 
 kpi = P.evaluate(ctx, current)
 stab = P.stability(reference, current)
@@ -222,6 +254,8 @@ info_bits = [f"Verfahren: {current.method}",
              f"{len(ctx.plan_dates)} Tage",
              f"{kpi['soll_dienste']} Soll-Dienste",
              "reaktive Umplanung" if reactive else "vollstaendige Neuplanung"]
+if method == "milp":
+    info_bits.append(f"Priorität: {prio_label}")
 if current.info:
     info_bits.append(f"Modell: {current.info.get('variablen', '?')} Variablen / "
                      f"{current.info.get('nebenbedingungen', '?')} Nebenbedingungen")
@@ -279,20 +313,21 @@ with tabs[1]:
 
     if st.button("Vergleich rechnen", type="primary"):
         st.session_state["compare_key"] = (data_key, scenario, manual_key,
-                                           time_limit, modus)
+                                           time_limit, modus, prio)
 
     if st.session_state.get("compare_key") == (data_key, scenario, manual_key,
-                                               time_limit, modus):
+                                               time_limit, modus, prio):
         rows = []
         for label, m in METHODS.items():
             ref_m = m if modus == "self" else modus
             with st.spinner(f"{label} ..."):
-                m_ref = cached((data_key, ref_m, "REF", (), time_limit),
+                m_ref = cached((data_key, ref_m, "REF", (), time_limit, prio),
                                lambda r=ref_m: compute(r, REFERENCE_SCENARIO, set(),
-                                                       limit=time_limit))
-                m_cur = cached((data_key, m, scenario, manual_key, ref_m, time_limit),
+                                                       limit=time_limit, fair=prio))
+                m_cur = cached((data_key, m, scenario, manual_key, ref_m, time_limit,
+                                prio),
                                lambda m=m, r=m_ref: compute(m, scenario, manual, r,
-                                                            time_limit))
+                                                            time_limit, fair=prio))
             k = P.evaluate(ctx, m_cur)
             s = P.stability(m_ref, m_cur)
             rows.append({
@@ -336,6 +371,17 @@ with tabs[1]:
             "Streuung und Spanne der Auslastung messen, wie gleichmaessig die "
             "Arbeit ueber die Belegschaft verteilt ist - erst sie unterscheiden "
             "zwei Plaene mit gleicher Besetzungsquote.")
+        if prio == 0.02:
+            st.caption(
+                f"**Priorität steht auf „{prio_label}“.** Das Gewicht fuer "
+                "Lastausgleich betraegt 0,02 je Minute gegen 200 je beibehaltener "
+                "Zuweisung - die Optimierung fuellt deshalb vor allem Luecken und "
+                "verteilt eine geerbte Schieflage nicht neu. Auf „Verteilungs"
+                "gerechtigkeit“ umgestellt sinkt die Spanne der Auslastung "
+                "deutlich, die Planstabilitaet dafuer um rund 1 bis 3 "
+                "Prozentpunkte (ERGEBNISSE.md, Abschnitt 4.5). Die Stufe "
+                "„Ausgewogen“ erreicht im Mittel eine deutlich bessere "
+                "Lastverteilung als die Heuristik, ohne Stabilitaet einzubuessen.")
     else:
         st.caption("Der Vergleich rechnet beide Verfahren durch und braucht je nach "
                    "Rechenzeitgrenze einige Sekunden.")
