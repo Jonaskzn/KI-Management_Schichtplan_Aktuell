@@ -193,13 +193,18 @@ save(fig, "03_planstabilitaet.png")
 # --------------------------------------------------------------------------
 # 4  Lastverteilung
 # --------------------------------------------------------------------------
-fig, ax = plt.subplots(figsize=(9, 4.2))
+WE_FILE = os.path.join(BASE, "wochenend_verteilung.csv")
+has_we = os.path.exists(WE_FILE)
+
+fig, axes = plt.subplots(1, 2 if has_we else 1, figsize=(11 if has_we else 9, 4.4))
+ax = axes[0] if has_we else axes
+
 sub = d[d["staffing_factor"] == 1.0]
 vals = [sub[sub["method"] == mth]["auslastung_spanne"].mean() * 100
         for mth in ["Greedy", "MILP"]]
 bars = ax.barh([1, 0], vals, 0.45, color=[BLUE, ORANGE])
 for bar in bars:
-    ax.annotate(f"{bar.get_width():.1f} Prozentpunkte".replace(".", ","),
+    ax.annotate(f"{bar.get_width():.1f} Pp.".replace(".", ","),
                 (bar.get_width(), bar.get_y() + bar.get_height() / 2),
                 va="center", ha="left", fontsize=12, color=INK, xytext=(6, 0),
                 textcoords="offset points")
@@ -212,9 +217,50 @@ ax.tick_params(length=0)
 ax.set_yticks([1, 0], ["Regelbasiert", "MILP-Optimierung"], fontsize=11)
 ax.set_xlim(0, max(vals) * 1.35)
 ax.set_xlabel("Spanne der individuellen Auslastung", color=INK2, fontsize=10)
-ax.set_title("Ungleichverteilung der Arbeitslast", pad=16)
-ax.text(0, -0.32, "Abstand zwischen der am geringsten und der am stärksten ausgelasteten Person · "
-                  "bedarfsgerechte Personaldecke", transform=ax.transAxes, fontsize=9, color=MUTED)
+ax.set_title("Abstand zwischen der am wenigsten und der\nam stärksten ausgelasteten Person",
+             fontsize=12, pad=12)
+
+if has_we:
+    w = pd.read_csv(WE_FILE)
+    ax = axes[1]
+    stufen = [0, 1, 2, 3, 4]
+    anteil = {}
+    for mth, label in [("Regelbasiert", "Regelbasiert"), ("MILP", "MILP-Optimierung")]:
+        sub_w = w[w["method"] == mth]
+        anteil[mth] = [ (sub_w["wochenenden"] == k).sum() / len(sub_w) * 100
+                        for k in stufen ]
+    x = range(len(stufen))
+    b1 = ax.bar([i - 0.19 for i in x], anteil["Regelbasiert"], 0.36,
+                color=BLUE, label="Regelbasiert")
+    b2 = ax.bar([i + 0.19 for i in x], anteil["MILP"], 0.36,
+                color=ORANGE, label="MILP-Optimierung")
+    for bset in (b1, b2):
+        for bar in bset:
+            if bar.get_height() < 1.5:
+                continue
+            ax.annotate(f"{bar.get_height():.0f}",
+                        (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                        ha="center", va="bottom", fontsize=10, color=INK,
+                        xytext=(0, 3), textcoords="offset points")
+    frame(ax, "Anteil der Belegschaft in %")
+    ax.set_xticks(list(x), ["0", "1", "2\nRichtwert", "3", "4\njedes"], fontsize=9)
+    ax.set_ylim(0, 100)
+    ax.axvline(2.5, color=MUTED, linewidth=1, linestyle=(0, (4, 3)))
+    ax.set_xlabel("Wochenenden im Dienst je Monat", color=INK2, fontsize=10)
+    ax.set_title("Wie oft muss eine Person am Wochenende arbeiten?",
+                 fontsize=12, pad=12)
+    ax.legend(frameon=False, fontsize=9, loc="upper left")
+
+fig.suptitle("Verteilung der Arbeitslast", fontsize=15, fontweight="bold",
+             y=1.04)
+fig.text(0.0, -0.10,
+         "Links: bedarfsgerechte Personaldecke · Rechts: alle 15 Instanzen, "
+         "608 Personenpläne, ungestörte Planerstellung\n"
+         "Der Richtwert liegt bei zwei Wochenenden je vier Wochen (Annahme A10). "
+         "Ihn überschreiten 75,3 % der Belegschaft in den Plänen der Heuristik "
+         "und 5,3 % in denen der Optimierung.",
+         fontsize=9, color=MUTED)
+fig.tight_layout()
 save(fig, "04_lastverteilung.png")
 
 # --------------------------------------------------------------------------

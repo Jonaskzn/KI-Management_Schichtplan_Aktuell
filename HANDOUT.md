@@ -45,7 +45,7 @@ auf dasselbe Ausfallvolumen kalibriert und unterscheiden sich nur in der Struktu
 verteilte Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der
 Struktur zuzurechnen ist und nicht dem Umfang.
 
-## Die sieben wichtigsten Learnings
+## Die acht wichtigsten Learnings
 
 **1. Machine Learning war nicht die Antwort — und das war das erste Ergebnis.**
 Es gibt keine zu lernende Zielvariable und keine historischen Planentscheidungen als
@@ -59,11 +59,11 @@ Ausfall- und Belegungsprognose als Vorstufe der Optimierung — das steht im Aus
 in den Ergebnissen.
 
 **2. Ein zu leichter Datensatz hätte das Projekt entwertet.**
-Bei bedarfsgerechter Personaldecke erreichen *beide* Verfahren nahezu 100 % Besetzung
-ohne Regelverstöße — kein nennenswerter Unterschied. Erst als wir die Personaldecke
-systematisch auf 90 % und 80 % absenkten, trennten sich die Verfahren: Bei 80 % war
-**kein einziger** Plan der Heuristik vollständig regelkonform, gegenüber **100 %** der
-optimierten Pläne. Wer nur eine bequeme Instanz rechnet, misst nichts.
+Bei bedarfsgerechter Personaldecke erreichen *beide* Verfahren nahezu 100 % Besetzung ohne
+Regelverstöße. Erst als wir die Decke systematisch auf 90 % und 80 % absenkten, trennten
+sich die Verfahren: Bei 80 % war **kein einziger** Plan der Heuristik vollständig
+regelkonform, gegenüber **100 %** der optimierten. Wer nur eine bequeme Instanz rechnet,
+misst nichts.
 
 **3. Die Zielfunktion entscheidet, nicht das Verfahren.**
 Nach einem Ausfall neu zu optimieren erhielt nur 51 % der Dienste — schlechter als die
@@ -76,15 +76,23 @@ nicht zu haben. Welches Ziel gewinnt, ist eine Führungsentscheidung, keine tech
 
 **4. Regeln gehören in die Daten, nicht in den Code.**
 Ruhezeiten, Verhältniszahlen und Qualifikationsvorgaben stehen als Spalten im Datensatz.
-Ändert sich die Rechtslage, ändert sich eine Zahl — nicht das Programm. Das hat die
-Diskussion mit Fachlogik erheblich vereinfacht.
+Ändert sich die Rechtslage, ändert sich eine Zahl — nicht das Programm.
 
-**5. Die Prüfung muss vom Verfahren getrennt sein.**
+**5. Vier von zehn Pflegekräften arbeiten jedes Wochenende — oder eben nicht.**
+Der greifbarste Unterschied steckt nicht in der Besetzungsquote, sondern in den *weichen*
+Abweichungen: Überschreitungen von Richtwerten, die dem Belastungsschutz dienen, aber keine
+Rechtsverstöße sind. 95 % davon betreffen Wochenenden. Über 608 Personenpläne gemessen sind
+bei der Heuristik **41 % der Belegschaft an allen vier Wochenenden im Dienst** und 75 % über
+dem Richtwert von zwei; bei der Optimierung liegen 88 % genau auf dem Richtwert. Kein
+Machbarkeitsproblem — dieselben Daten, dieselbe Besetzungsquote, null Rechtsverstöße auf
+beiden Seiten.
+
+**6. Die Prüfung muss vom Verfahren getrennt sein.**
 Eine eigene Funktion bewertet den fertigen Plan unabhängig davon, wer ihn erzeugt hat.
 Ohne diese Trennung wäre jeder KPI-Vergleich zirkulär gewesen — und sie hat uns
 tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
-**6. Der Vorteil steckt in der Kette, nicht in einem Schritt.**
+**7. Der Vorteil steckt in der Kette, nicht in einem Schritt.**
 Wir haben alle vier Kombinationen aus Ausgangsplan und Reparaturverfahren gerechnet
 (geänderte Dienste je Monat): Excel-Plan von Excel repariert **19,7** · Excel-Plan von MILP
 **25,8** · MILP-Plan von Excel **24,8** · MILP-Plan von MILP **14,9**. Auf jedem geerbten
@@ -93,16 +101,15 @@ mitbehebt. Nur wenn Planung **und** Anpassung aus demselben System kommen, sinkt
 Für die Praxis: Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die
 Rechtssicherheit, aber nicht die Entlastung.
 
-**7. Eine Kennzahl ohne ihren Bezugspunkt ist nicht interpretierbar.**
-Planstabilität als Prozentwert hängt davon ab, wie gut der Ausgangsplan war — ein Verfahren,
-das offene Dienste und Regelverstöße stehen lässt, gewinnt sie durch Untätigkeit. Wir
-berichten sie deshalb nie allein, sondern mit der absoluten Zahl geänderter Dienste, und
-haben zusätzlich beide Verfahren denselben Plan reparieren lassen (95,0 % gegen 91,8 %).
-Dieselbe Disziplin beim Szenarienvergleich: Die Ausfallwelle sah zunächst instabiler aus als
-verteilte Einzelausfälle — betrachtet man nur die Instanzen, in denen sie *nicht* mehr
-Ausfalltage enthielt, schrumpfte der Unterschied von 2,5 auf 0,8 Prozentpunkte. Überwiegend
-ein Mengen-, kein Struktureffekt. Der Verteilungseffekt hielt der Prüfung stand (6 von 6).
-Nur den berichten wir.
+**8. Eine Kennzahl ohne ihren Bezugspunkt ist nicht interpretierbar.**
+Planstabilität als Prozentwert hängt davon ab, wie gut der Ausgangsplan war — wer offene
+Dienste und Regelverstöße stehen lässt, gewinnt sie durch Untätigkeit. Wir berichten sie
+deshalb nie allein, sondern mit der absoluten Zahl geänderter Dienste, und haben beide
+Verfahren zusätzlich denselben Plan reparieren lassen (95,0 % gegen 91,8 %). Dieselbe
+Disziplin beim Szenarienvergleich: Die Ausfallwelle sah instabiler aus — betrachtet man nur
+die Instanzen, in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der Unterschied
+von 2,5 auf 0,8 Prozentpunkte. Überwiegend ein Mengen-, kein Struktureffekt. Der
+Verteilungseffekt hielt stand (6 von 6) — nur den berichten wir.
 
 ## Herausforderungen und Erfolgsfaktoren
 

@@ -41,6 +41,24 @@ zwischen den Verfahren sonst nicht vergleichbar ist — siehe Abschnitt 4.
 
 ## 2. Ergebnisse nach Personaldecke
 
+### 2.1 Was die Kennzahlen bedeuten
+
+Der Unterschied zwischen **harten** und **weichen** Verstößen entscheidet, wie die Tabellen
+zu lesen sind. `evaluate()` unterscheidet drei Klassen:
+
+| Klasse | Was zählt hinein | Grundlage | Bedeutung |
+|---|---|---|---|
+| **Untergrenzenverstöße** | Schicht unter der Pflegepersonaluntergrenze besetzt | PpUGV § 6 + Anlage | eigene Kennzahl, weil nach § 137i SGB V sanktionsbewehrt |
+| **harte Regelverstöße** | Ruhezeit < 11 h · mehr als 5 Dienste in Folge · Arbeitszeit über Vertragsobergrenze · Fachkraftquote unterschritten · Hilfskraftanteil über 10 % · Nachtdienst ohne Nachtdiensteignung | ArbZG §§ 5, 6 · TVöD-K § 6 · PpUGV § 2 | **Ein Plan mit harten Verstößen ist nicht einsetzbar.** |
+| **weiche Abweichungen** | mehr als 2 Wochenenden im Dienst je 4 Wochen · mehr als 8 Nachtdienste je 4 Wochen | Annahme A10, arbeitswissenschaftlich gestützt, im Gesetz nicht beziffert | zulässig, aber unerwünscht — Belastungsschutz, nicht Legalität |
+
+Weiche Abweichungen sind also **keine Rechtsverstöße**. Sie messen, wie fair und
+belastungsschonend ein Plan ist. Genau deshalb sind sie für Personalbindung und
+Zufriedenheit die interessantere Größe: Zwei Pläne mit identischer Besetzungsquote und null
+Rechtsverstößen können sich für die Mitarbeitenden völlig unterschiedlich anfühlen.
+
+### 2.2 Ergebnisse
+
 Mittelwerte über 5 Seeds × 3 Szenarien (15 Pläne je Zelle), ± Standardabweichung.
 
 ### Bedarfsgerechte Besetzung (100 %, Ø 22 Köpfe)
@@ -366,7 +384,34 @@ nicht im Normalbetrieb, sondern genau dort, wo es eng wird.
 bedarfsgerechter Besetzung sinkt die Streuung der individuellen Auslastung von 0,069 auf
 0,014, die Spanne zwischen der am geringsten und der am stärksten ausgelasteten Person von
 33 auf 7 Prozentpunkte, und alle 15,7 Überschreitungen der Wochenend- und
-Nachtdienst-Richtwerte entfallen. In der reaktiven Betriebsart gibt die Optimierung diesen
+Nachtdienst-Richtwerte entfallen.
+
+Am greifbarsten wird das bei den Wochenenddiensten. **95,5 % aller weichen Abweichungen der
+Heuristik sind Wochenend-Überschreitungen** — die Nachtdienst-Richtwerte spielen praktisch
+keine Rolle. Über alle 15 Instanzen und 608 Personenpläne verteilt sich die Wochenendarbeit
+so:
+
+| Wochenenden im Dienst je Monat | Regelbasiert | MILP |
+|---|---|---|
+| keines | 4,9 % | 4,9 % |
+| eines | 0,7 % | 1,3 % |
+| zwei (Richtwert) | 19,1 % | **88,5 %** |
+| drei | 33,9 % | 4,9 % |
+| **alle vier** | **41,4 %** | 0,3 % |
+| **über dem Richtwert** | **75,3 %** | **5,3 %** |
+
+In den Plänen der Heuristik arbeiten also **vier von zehn Pflegekräften an jedem einzelnen
+Wochenende des Monats**, während eine Person gar keines übernimmt. Bei der Optimierung
+liegen knapp neun von zehn exakt auf dem Richtwert. Das ist kein Machbarkeitsproblem — die
+Optimierung beweist auf denselben Daten, dass eine nahezu richtwertkonforme Verteilung
+existiert. Die Heuristik findet sie nur nicht: Bei ihr ist der Wochenend-Richtwert lediglich
+ein Sortierkriterium. Wer sein Kontingent ausgeschöpft hat, rutscht in der Rangfolge nach
+hinten, bleibt aber wählbar — und wird eingeteilt, sobald die Bevorzugten nicht können. Da
+sie keine Entscheidung zurücknimmt, gibt es aus dieser Schieflage keinen Weg heraus.
+
+Für die Personalbindung ist das die relevanteste Einzelzahl der ganzen Auswertung: gleiche
+Daten, gleiche Regeln, gleiche Besetzungsquote, null Rechtsverstöße auf beiden Seiten — und
+trotzdem für 41 % der Belegschaft jedes Wochenende im Dienst statt höchstens jedes zweite. In der reaktiven Betriebsart gibt die Optimierung diesen
 Vorsprung weitgehend auf, weil die Zielfunktion sie dazu anhält (Abschnitt 3.2).
 
 **Die reaktive Umplanung ist der größte Einzeleffekt.** Eine vollständige Neuplanung nach

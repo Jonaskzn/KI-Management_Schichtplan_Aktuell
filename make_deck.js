@@ -308,14 +308,14 @@ s.addNotes("Das ist die Kernfolie. Betonen: Der Mehrwert entsteht nicht im Norma
 
 // ---------- 10 Ergebnis Lastverteilung ------------------------------------
 s = pres.addSlide();
-chartSlide(s, "Ergebnis 2: Verteilung der Arbeitslast",
-  "Gleiche Besetzungsquote, sehr unterschiedliche Belastung der einzelnen Person.",
-  IMG("04_lastverteilung.png"), 1.805, [
-    { t: "Spanne von 33 auf 7 Prozentpunkte", d: "Abstand zwischen der am geringsten und der am stärksten ausgelasteten Person." },
-    { t: "Wochenend-Richtwerte", d: "Die Baseline überschreitet sie im Schnitt 16-mal je Plan, die Optimierung kein einziges Mal." },
-    { t: "Warum", d: "Die Heuristik entscheidet lokal optimal und erzeugt dadurch systematisch Ungleichverteilung." },
+chartSlide(s, "Ergebnis 2: Vier von zehn arbeiten jedes Wochenende",
+  "Gleiche Besetzungsquote, null Rechtsverstöße auf beiden Seiten — und trotzdem ein völlig anderer Monat.",
+  IMG("04_lastverteilung.png"), 2.221, [
+    { t: "41 % gegen 0,3 %", d: "So groß ist der Anteil der Belegschaft, der in den Plänen der Heuristik an allen vier Wochenenden im Dienst ist." },
+    { t: "Kein Machbarkeitsproblem", d: "Auf denselben Daten findet die Optimierung eine Verteilung, in der 88 % genau auf dem Richtwert von zwei Wochenenden liegen." },
+    { t: "Warum", d: "Bei der Heuristik ist der Richtwert nur ein Sortierkriterium. Sie nimmt keine Entscheidung zurück — aus der Schieflage gibt es keinen Weg heraus." },
   ]);
-s.addNotes("Für die Personalbindung ist das der relevante Wert: Zwei Pläne mit identischer Besetzungsquote fühlen sich sehr unterschiedlich an.");
+s.addNotes("Das ist die anschaulichste Zahl des Projekts - sie kommt bei einem Pflegepublikum an. Gepoolt ueber alle 15 Instanzen und 608 Personenplaene. Wichtig zur Einordnung: Wochenend-Ueberschreitungen sind KEINE Rechtsverstoesse, sondern weiche Abweichungen vom Richtwert aus Annahme A10 - Belastungsschutz, nicht Legalitaet. 95 Prozent aller weichen Abweichungen der Heuristik sind Wochenend-Ueberschreitungen, Nachtdienste spielen praktisch keine Rolle.");
 
 // ---------- 11 Ergebnis Planstabilitaet -----------------------------------
 s = pres.addSlide();
