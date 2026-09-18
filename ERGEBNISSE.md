@@ -343,7 +343,76 @@ Feuerwehr auf bestehende Excel-Pläne gesetzt wird, hebt einen Teil des Nutzens 
 Rechtskonformität —, aber nicht den Effizienzvorteil. Der entsteht erst, wenn auch die
 Monatsplanung aus dem System kommt.
 
-### 4.4 Was daraus folgt
+### 4.4 Warum die Optimierung auf dem fremden Plan bei der Lastverteilung nicht gewinnt
+
+Repariert die Optimierung den Plan der Heuristik, liegt ihre Spanne der Auslastung mit 0,356
+**über** der der Heuristik (0,333). Das wirkt widersinnig — sie sollte den Plan doch besser
+machen können. Zwei Ursachen, die sich trennen lassen.
+
+**Erstens, und überwiegend: ein Deckungsartefakt.** Die Heuristik lässt Dienste unbesetzt;
+unbesetzte Dienste erzeugen keine Auslastung und drücken die Spanne deshalb künstlich. Teilt
+man die 45 Pläne danach auf, ob die Heuristik überhaupt Lücken lässt:
+
+| Teilmenge | Spanne Regelbasiert | Spanne MILP | offene Dienste (Regelbasiert) |
+|---|---|---|---|
+| Heuristik besetzt vollständig (19 Pläne) | 0,314 | 0,321 | 0,00 |
+| Heuristik lässt Lücken (26 Pläne) | 0,347 | **0,381** | 4,69 |
+
+Wo beide dieselbe Arbeitsmenge verteilen, ist die Spanne praktisch gleich — die Optimierung
+liegt dort in nur 7 von 19 Plänen höher, also im Bereich des Zufalls. Der sichtbare
+Rückstand entsteht fast vollständig dort, wo die Optimierung **zusätzlich 4,69 Dienste
+besetzt**, die die Heuristik offen lässt. Diese Arbeit muss jemand übernehmen, und das hebt
+die Spitzenauslastung. Die Heuristik „gewinnt" diese Kennzahl, indem sie die Arbeit nicht
+tut.
+
+**Zweitens: die Gewichtung.** Der verbleibende Rest hat eine klare Ursache in der
+Zielfunktion. `keep` = 200 je beibehaltener Zuweisung steht gegen `fair` = 0,02 je Minute
+Abweichung von der Zielarbeitszeit. Eine Person um 500 Minuten besser auszulasten ist damit
+10 Punkte wert; eine einzige Zuweisung aufzubrechen kostet 200. Das Modell verzichtet also
+**rational** auf Umverteilung. Hinzu kommt: Lastausgleich ist die einzige weiche Regel, die
+die Heuristik überhaupt kennt (sie wählt stets die am wenigsten ausgelastete Person). Auf
+genau dieser Kennzahl trifft ihre einzige Faustregel also auf ein Modell, dem Fairness fast
+nichts wert ist.
+
+### 4.5 Sensitivitätsanalyse: was das Gewicht „beibehalten" kostet
+
+Ob das eine Grenze des Verfahrens oder eine Setzung ist, lässt sich messen. Die folgende
+Analyse variiert allein `keep` und lässt alles andere unverändert (Szenario S2,
+bedarfsgerechte Personaldecke, 5 Seeds, Ausgangsplan der Heuristik; Skript
+`sensitivitaet.py`):
+
+| Verfahren | Spanne | Planstabilität | Änderungen | weiche Abweichungen |
+|---|---|---|---|---|
+| Regelbasiert (Referenz) | 0,391 | 91,4 % | 26,2 | 16,0 |
+| MILP, `keep` = 200 *(Standard)* | 0,478 | **93,4 %** | **19,8** | 15,6 |
+| MILP, `keep` = 50 | 0,478 | 93,0 % | 21,0 | 15,2 |
+| MILP, `keep` = 20 | 0,243 | 80,9 % | 61,0 | 2,4 |
+| MILP, `keep` = 5 | **0,082** | 68,1 % | 109,0 | **0,0** |
+| MILP, `keep` = 0 | 0,065 | 14,9 % | 356,6 | 0,0 |
+
+**Die Optimierung kann den Plan der Heuristik sehr wohl in jeder Qualitätsdimension
+schlagen.** Schon bei `keep` = 20 liegt sie bei der Spanne mit 0,243 gegen 0,391 und bei den
+weichen Abweichungen mit 2,4 gegen 16,0 deutlich vorn. Bei `keep` = 5 räumt sie sämtliche
+weichen Abweichungen ab und erreicht eine Spanne von 0,082 — ein Fünftel des Werts der
+Heuristik. Sie tut es im Standardaufbau nur deshalb nicht, weil wir ihr Planstabilität als
+vorrangiges Ziel vorgegeben haben.
+
+Der Preis ist ebenso klar: Bei `keep` = 5 sinkt die Planstabilität von 93,4 % auf 68,1 %,
+die Zahl geänderter Dienste steigt von 19,8 auf 109. Für die Mitarbeitenden bedeutet das den
+Unterschied zwischen zwanzig und über hundert Umstellungen im Monat.
+
+Bemerkenswert ist die **Schwelle**: Zwischen `keep` = 50 und `keep` = 20 kippt das Verhalten
+abrupt von „Lücken füllen" zu „Monat umverteilen". Dazwischen gibt es kaum einen sanften
+Übergang. Wer das Gewicht in der Praxis einstellt, wählt also faktisch zwischen zwei
+Betriebsarten, nicht auf einer stufenlosen Skala.
+
+**Konsequenz für die Interpretation.** Die Spanne der reaktiven Optimierung darf nicht als
+Leistungsgrenze gelesen werden. Sie ist das Ergebnis einer bewussten Priorisierung, und
+diese Priorisierung ist eine Führungsentscheidung: Wer Planungsruhe für die Mitarbeitenden
+höher gewichtet als Verteilungsgerechtigkeit, bekommt `keep` = 200. Wer es umgekehrt sieht,
+stellt es um — und bekommt messbar das andere Ergebnis.
+
+### 4.6 Was daraus folgt
 
 Es gibt **keinen** Aufbau, in dem die Optimierung auf allen Kennzahlen gleichzeitig gewinnt,
 wenn sie einen mangelhaften Plan erbt — „möglichst wenig ändern" und „Mängel beheben" sind
@@ -358,10 +427,12 @@ Für die Arbeit folgt daraus eine klare Ordnung:
    zeigt, dass der Vorsprung nicht an unterschiedlichen Ausgangsplänen hängt.
 3. **Die Vier-Felder-Tafel (4.3) trägt den Wirkmechanismus**: Der Effizienzvorteil ist
    systemisch und entsteht erst, wenn Planung und Anpassung aus derselben Hand kommen.
-4. **Der Migrationsfall — Optimierung erbt einen Excel-Plan — gehört in die Diskussion**,
+4. **Wo die Optimierung auf einer Kennzahl zurückliegt, liegt es an Deckung oder
+   Gewichtung** (4.4, 4.5) — nicht am Verfahren. Beides ist gemessen und einstellbar.
+5. **Der Migrationsfall — Optimierung erbt einen Excel-Plan — gehört in die Diskussion**,
    nicht in die Ergebnistabelle: Wer umsteigt, muss im ersten Monat mit mehr Änderungen
    rechnen, weil Altlasten mitbehoben werden.
-5. **Jede Stabilitätsangabe nennt ihren Ausgangsplan.** Unsere erste Auswertung tat das
+6. **Jede Stabilitätsangabe nennt ihren Ausgangsplan.** Unsere erste Auswertung tat das
    nicht und war dadurch nicht interpretierbar.
 
 ---
@@ -465,8 +536,11 @@ zu wenig für inferenzstatistische Aussagen. Ein Signifikanztest wird bewusst ni
 gerechnet.
 
 **Die Gewichte der Zielfunktion sind gesetzt, nicht hergeleitet.** Wie stark Unterbesetzung
-gegen Lastverteilung gegen Wunscherfüllung zählt, ist eine Managemententscheidung. Andere
-Gewichte liefern andere Pläne. Eine Sensitivitätsanalyse dazu steht aus.
+gegen Lastverteilung gegen Wunscherfüllung zählt, ist eine Managemententscheidung. Für das
+wichtigste Gewicht — `keep` — ist die Wirkung in Abschnitt 4.5 quantifiziert. Die übrigen
+Gewichte sind nicht systematisch variiert; insbesondere das Verhältnis von
+Untergrenzenstrafe zu Unterbesetzungsstrafe und die Gewichtung der Dienstwünsche bleiben
+ungeprüft.
 
 **Die Obergrenze der Optimierung wurde nicht erreicht.** Das MILP löst alle 90 Instanzen
 vollständig regelkonform. Das heißt nicht, dass es das immer täte — es heißt, dass der
@@ -641,10 +715,13 @@ den Punkt, den die reine Besetzungsquote nicht sichtbar macht.
 
 **Die Gewichtung der Ziele ist eine Führungsentscheidung, keine technische.** Ob ein
 Ausfall durch minimales Lückenfüllen oder durch Umverteilen im ganzen Monat aufgefangen
-wird, entscheidet nicht das Verfahren, sondern das Gewicht in der Zielfunktion. Beides ist
-vertretbar: Stabilität schützt die private Planung der Mitarbeitenden, Umverteilung schützt
-die Gleichverteilung der Last. Der Prototyp macht den Preis beider Optionen sichtbar —
-diese Abwägung gehört auf die Leitungsebene, nicht in die Konfigurationsdatei.
+wird, entscheidet nicht das Verfahren, sondern ein einziges Gewicht. Die Sensitivitätsanalyse
+in Abschnitt 4.5 beziffert den Wechselkurs: Planstabilität 93,4 % bei einer Spanne von 0,478
+auf der einen Seite, 68,1 % bei 0,082 auf der anderen — zwanzig gegen über hundert geänderte
+Dienste im Monat. Beides ist vertretbar: Stabilität schützt die private Planung der
+Mitarbeitenden, Umverteilung schützt die Gleichverteilung der Last. Der Prototyp macht den
+Preis beider Optionen sichtbar; die Abwägung gehört auf die Leitungsebene, nicht in die
+Konfigurationsdatei.
 
 ---
 

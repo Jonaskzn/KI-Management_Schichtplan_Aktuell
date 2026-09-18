@@ -82,6 +82,8 @@ python test_planner.py       # Planungslogik gegen den Datensatz
 python validate_dataset.py   # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
 python campaign.py           # Evaluationskampagne, 15 Instanzen (~15 Min.)
 python campaign.py --report  # aggregierte Auswertung der Kampagne
+python sensitivitaet.py      # Sensitivitaet des Gewichts 'keep' (~1 Min.)
+python wochenend_analyse.py  # Verteilung der Wochenenddienste (~2 Min.)
 ```
 
 ## Abgabeartefakte erzeugen
