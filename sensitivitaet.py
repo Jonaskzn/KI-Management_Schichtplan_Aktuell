@@ -63,7 +63,7 @@ def main() -> None:
 
         # Vergleichspunkt: die Heuristik repariert ihren eigenen Plan
         gr = P.plan_greedy(ctx, SZENARIO, fixed=ref.assignments)
-        s_gr, k_gr = P.stability(ref, gr), P.evaluate(ctx, gr)
+        s_gr, k_gr = P.stability(ref, gr), P.evaluate(ctx, gr, basisplan=ref)
         rows.append({"seed": seed, "verfahren": "Regelbasiert", "keep": None, "fair": None,
                      "spanne": k_gr["auslastung_spanne"],
                      "streuung": k_gr["auslastung_streuung"],
@@ -80,7 +80,7 @@ def main() -> None:
             w["fair"] = float(fair)
             r = P.plan_milp(ctx, SZENARIO, reference=ref, weights=w,
                             time_limit_s=60.0)
-            st, k = P.stability(ref, r), P.evaluate(ctx, r)
+            st, k = P.stability(ref, r), P.evaluate(ctx, r, basisplan=ref)
             rows.append({"seed": seed, "verfahren": bezeichner,
                          "keep": keep, "fair": fair,
                          "spanne": k["auslastung_spanne"],

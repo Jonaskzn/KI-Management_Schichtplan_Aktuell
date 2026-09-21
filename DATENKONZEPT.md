@@ -163,6 +163,57 @@ dritte Pflegehilfskraft würde die 10-%-Grenze der PpUGV-Anlage für diesen Bere
 (aktuell 8,0 % Kapazitätsanteil). Der bundesweite Durchschnitt mischt Bereiche mit Grenzen bis
 20 %. Die strengere Norm hat Vorrang vor dem Mittelwert.
 
+### 3.6 Vier Stationstypen — und was dabei bewusst *nicht* variiert wird
+
+Die Evaluationskampagne variiert Seed und Personaldecke, aber immer auf derselben Station.
+Damit ist belegt, dass ein Befund nicht an einer einzelnen Zufallsziehung hängt. **Nicht**
+belegt ist damit, dass er nicht an *dieser Station* hängt — an 30 Betten, an der
+Verhältniszahl 10:1, an genau diesem Qualifikationsmix. Für diese Frage erzeugt der
+Generator drei weitere Stationstypen. Die Verhältniszahlen und Hilfskraftquoten sind der
+Anlage zur PpUGV entnommen und damit belegt; Bettenzahl und Hilfskraftbesetzung sind
+[ANNAHME] und bilden eine plausible Station des jeweiligen Typs ab.
+
+| Stationstyp | Betten | Tagschicht | Nachtschicht | Hilfskräfte Tag/Nacht | Köpfe | Solldienste |
+|---|---|---|---|---|---|---|
+| Innere Medizin / Kardiologie *(Hauptstation)* | 30 | 10:1 | 22:1 | 10 % / 10 % | 23 | 237 |
+| Geriatrie | 40 | 10:1 | 20:1 | 15 % / 20 % | 28 | 306 |
+| Herzchirurgie | 24 | 7:1 | 15:1 | 5 % / 0 % | 20 | 220 |
+| Intensivmedizin | 12 | 2:1 | 3:1 | 5 % / 5 % | 28 | 330 |
+
+Die Intensivstation ist der lehrreichste Fall: Sie hat mit 12 Betten die *kleinste*
+Bettenzahl und mit 28 Köpfen die *zweitgrößte* Belegschaft. Die Verhältniszahl 2:1 kehrt
+die Intuition um — nicht die Größe der Station bestimmt den Personalbedarf, sondern die
+Pflegeintensität. Zugleich ist sie die einzige Station ohne Pflegehilfskräfte, weil 5 % von
+einem Schichtteam dieser Größe ganzzahlig null ergeben.
+
+**Entscheidend ist, was dabei gleich bleibt.** Geändert werden ausschließlich *Werte*
+innerhalb des Datensatzes. Das **Schema** — 94 Spalten, Korn Mitarbeitende × Kalendertag —
+ist identisch, und `planner.py` wurde für die Replikation nicht angefasst. Das hat zwei
+Gründe:
+
+1. **Methodisch.** Der Vergleich der beiden Planungsverfahren steht und fällt damit, dass
+   beide dieselbe Eingabe lesen. Ein zweites Schema hieße ein zweiter Lesepfad — und dann
+   prüft die Replikation das CSV-Einlesen mit, nicht die Planungsverfahren.
+2. **Inhaltlich.** Dass ein anderer Stationstyp ohne Codeänderung planbar ist, ist der
+   Beleg für das Konstruktionsprinzip des Prototyps: **Grenzwerte stehen in den Daten,
+   nicht im Code.** Wäre irgendwo eine 10:1 fest verdrahtet, würde die Intensivstation mit
+   2:1 sofort falsche Untergrenzen erzeugen — und das Prüfskript würde es melden.
+
+Eine Änderung des Schemas wäre also nicht die stärkere, sondern die schwächere Prüfung. Sie
+würde die Aussage, die wir belegen wollen, gerade zerstören.
+
+Die drei Replikationsinstanzen liegen unter `instanzen/` und werden vom selben Prüfskript
+geprüft wie die Hauptinstanz (`python validate_dataset.py instanzen/datensatz_geriatrie.csv`).
+Ausgewählt sind sie nach **derselben Regel wie die Hauptinstanz** (Abschnitt 5.2): die erste
+Instanz in aufsteigender Seed-Reihenfolge ab 20261130, in der S1 und S2 exakt gleich viele
+Ausfalltage tragen — Geriatrie 20261164 (25 zu 25), Herzchirurgie 20261216 (15 zu 15),
+Intensivmedizin 20261146 (28 zu 28). Die Regel greift ausschließlich auf Eingangsdaten zu.
+
+*Anmerkung zur Quelle:* Die Anlage zur PpUGV führt die pflegesensitiven Bereiche einzeln.
+Die von uns verwendeten 10:1 / 22:1 entsprechen der Zeile „Innere Medizin"; eine Quelle
+führt Kardiologie mit 12:1 / 24:1 gesondert, eine andere fasst „Innere Medizin/Kardiologie"
+mit 10:1 / 22:1 zusammen. Unser Wert ist damit der strengere der beiden Lesarten.
+
 ---
 
 ## 4. Die Einzeltabelle: Aufbau und Begründung
@@ -356,10 +407,46 @@ Ausfalltage gegenüber 18,8 bei S1 — zwei Drittel mehr. Die beiden Szenarien u
 sich damit in zwei Dimensionen gleichzeitig.
 
 Das Episodenmodell behebt beides: Die Episodenzahl ist empirisch auf das Ausfallvolumen
-von S1 kalibriert. Über die 15 Kampagneninstanzen gemessen ergeben 7 Episoden im Mittel
-18,1 Ausfalltage gegenüber 17,0 bei S1 — 6,7 % Abweichung, gegenüber 22 % bei 8 Episoden
-und 9 % bei 6. Die Mehrtägigkeit ist zugleich explizit modelliert statt als Nebeneffekt
+von S1 kalibriert, und die Mehrtägigkeit ist explizit modelliert statt als Nebeneffekt
 einer erhöhten Tagesrate erhofft.
+
+**Die Kalibrierung ist ein Parameter je Stationstyp, keine feste Zahl.** Das Ausfallvolumen
+von S1 entsteht aus Rate × Personentagen und wächst damit mit der Belegschaft. Eine für
+23 Köpfe kalibrierte Episodenzahl erzeugt auf einer Station mit 28 Köpfen deutlich zu wenig
+Ausfalltage — der Vergleich S1 gegen S2 wäre dort konfundiert, und zwar in der Richtung,
+die unsere These begünstigt. Die Zahl steht deshalb in `WARD_TYPEN[…]["s2_episoden"]` und
+wird mit `generate_dataset.kalibriere_episoden()` bestimmt. Innerhalb eines Stationstyps
+bleibt sie über alle Seeds und Personaldecken konstant — sonst würde jede Instanz nach
+ihrem eigenen Maßstab kalibriert.
+
+Gemessen über die 15 Kampagneninstanzen (5 Seeds × 3 Personaldecken) je Stationstyp:
+
+| Stationstyp | Episoden | Ø S1-Tage | Ø S2-Tage | Abweichung der Mittelwerte | mittlere Abweichung je Instanz |
+|---|---|---|---|---|---|
+| Innere Medizin | **7** | 15,7 | 17,8 | 13,6 % | 21,7 % |
+| *(dieselbe Station mit 6)* | *6* | *15,7* | *15,6* | *0,4 %* | *14,6 %* |
+| Geriatrie | **8** | 22,9 | 19,6 | 14,5 % | 21,1 % |
+| Herzchirurgie | **6** | 18,6 | 15,9 | 14,3 % | 20,7 % |
+| Intensivmedizin | **10** | 26,9 | 24,7 | 8,2 % | 25,9 % |
+
+Zwei Dinge sind daran offen auszusprechen:
+
+**Erstens** wurde für die drei Replikationsstationen jeweils der Wert gewählt, der die
+mittlere Abweichung **je Instanz** minimiert — nicht der, der die Mittelwerte zur Deckung
+bringt. Beide Kriterien liegen nur ein bis zwei Episoden auseinander, aber das erste ist das
+strengere: Wenn sich in einer Instanz zu viele und in einer anderen zu wenige Ausfalltage
+gegenseitig aufheben, sieht der Mittelwertvergleich gut aus, obwohl jede einzelne Instanz
+konfundiert ist.
+
+**Zweitens** ist die Hauptstation die dokumentierte Ausnahme. Ihr Wert 7 stammt aus einer
+früheren Kalibrierung; die heutige Messung weist 6 als besseren Wert aus (Zeile in Kursiv).
+Wir behalten 7 bei, weil sämtliche veröffentlichten Kampagnenergebnisse mit diesem Wert
+gerechnet sind und aus dem ausgelieferten Datensatz reproduzierbar bleiben sollen. Der
+Preis ist benannt: S2 trägt auf der Hauptstation im Mittel 13,6 % mehr Ausfalltage als S1.
+Für die ausgelieferte Instanz selbst ist die Parität exakt (19 zu 19, Abschnitt 5.2); die
+Richtung der Abweichung über die Kampagne hinweg spricht **gegen** und nicht für unsere
+These, weil S2 dort etwas mehr Last trägt. Eine Neurechnung der Kampagne mit 6 Episoden
+wäre die saubere Auflösung und ist als offener Punkt vermerkt.
 
 ### 5.4 Vorlaufzeit
 
@@ -372,6 +459,23 @@ Vereinfachung und in Abschnitt 10 als Limitation geführt.
 
 Das Szenariodesign trennt sauber, was die Arbeit trennen muss: **S0 misst Planerstellung,
 S1/S2 messen Anpassungsfähigkeit.** Beide Verfahren erhalten identische Ereignisdateien.
+
+### 5.5 Was ein Ausfall arbeitszeitrechtlich bedeutet
+
+Ein Ausfall im Datensatz ist ein Verfügbarkeitsereignis ohne Grund. Für die Planung wird er
+als **Arbeitsunfähigkeit** behandelt — das ist die Lesart, die die Projektvorgabe mit
+„Krankheitsausfällen" meint. Daraus folgt eine Regel, die nicht im Datensatz steht, sondern
+aus ihm und dem Ausgangsplan berechnet wird: die **Krankheitsgutschrift** nach dem
+Entgeltausfallprinzip (§ 4 Abs. 1 EFZG; BAG, 05.10.2023 – 6 AZR 210/22). Gutgeschrieben
+wird die Nettodauer des Dienstes, den die Person laut Ausgangsplan an dem Ausfalltag gehabt
+hätte; ein Ausfall an einem dienstfreien Tag ergibt keine Gutschrift. Die Gutschrift zählt
+wie gearbeitete Zeit für Auslastung, Zielarbeitszeit und vertragliche Obergrenze — Letzteres
+ist eine [ANNAHME], im Annahmenregister als A14 geführt.
+
+Die Gutschrift braucht keine zusätzlichen Daten und keine Gesundheitsinformation: Sie knüpft
+allein an die Tatsache des Ausfalls und an den Dienstplan, der zu diesem Zeitpunkt galt.
+Warum sie nötig ist und was sich durch sie an den Ergebnissen geändert hat, steht in
+`ERGEBNISSE.md`, Abschnitt 3.2.
 
 ---
 
@@ -389,13 +493,14 @@ Alles, was nicht belegt ist, steht hier — offen und einzeln prüfbar.
 | A6 | Weihnachtseffekt | Faktor 0,80 ab 24.12. | reduzierter Elektivbetrieb | niedrig |
 | A7 | Anteil kurzfristiger an gesamten Ausfällen (S1) | 4 % der Personentage | AU-Tage insgesamt sind belegt, die Aufteilung Kurz-/Langzeit nicht | **hoch** — Kerngröße der Szenarien |
 | A7a | Dauer einer Krankheitsepisode (S2) | 2–4 Tage, gleichverteilt | mehrtägige Abwesenheit ist der Normalfall; die konkrete Verteilung ist gesetzt | mittel |
-| A7b | Konzentration der Welle (S2) | 7 Episoden, Beginn zu 80 % im Sechstagefenster | Stärke und Länge einer Infektwelle sind nicht belegt; die Episodenzahl ist so kalibriert, dass S2 über die 15 Kampagneninstanzen dasselbe Ausfallvolumen trägt wie S1 (Ø 18,1 gegen 17,0 Ausfalltage, Abweichung 6,7 %) | **hoch** — bestimmt den Kontrast zwischen den Szenarien |
+| A7b | Konzentration der Welle (S2) | 7 Episoden (Hauptstation), Beginn zu 80 % im Sechstagefenster | Stärke und Länge einer Infektwelle sind nicht belegt; die Episodenzahl ist je Stationstyp auf das Ausfallvolumen von S1 kalibriert (Hauptstation: Ø 17,8 gegen 15,7 Ausfalltage, Abweichung 13,6 %; Abschnitt 5.3) | **hoch** — bestimmt den Kontrast zwischen den Szenarien |
 | A8 | Zwei-Personen-Nachtdienst | Minimum 2 | die Untergrenze ergäbe bei 21 Patienten rechnerisch 1 Kraft; ein Alleindienst ist auf 30 Betten praktisch nicht vertretbar (Pausenablösung, § 4 ArbZG) | mittel |
 | A9 | Mindestbesetzung Tagdienst | 3 ab 15 Patienten | Pausenablösung und Vertretbarkeit | mittel |
 | A10 | Max. 5 Dienste in Folge, ≥ 2 freie Tage am Stück, max. 2 Wochenenden / 4 Wochen, max. 8 Nachtdienste / 4 Wochen | – | gestützt auf § 6 Abs. 1 ArbZG (arbeitswissenschaftliche Erkenntnisse), aber nicht beziffert im Gesetz | mittel |
 | A11 | Leitungsfreistellung 50 %, Leitung nur im Frühdienst | – | übliche Praxis; senkt die planbare Kapazität | niedrig |
 | A12 | Historie per Greedy-Heuristik erzeugt | – | die Historie ist Eingabe, nicht Evaluationsgegenstand; sie muss nur regelkonform und plausibel sein | niedrig |
 | A13 | Ausfallzeiten für den Bruttobedarf | 30 Urlaub + 20 AU + 5 Fortbildung von 251 Arbeitstagen | Urlaub und AU belegt, Fortbildungstage und Jahresarbeitstage gesetzt | mittel |
+| A14 | Krankheitsgutschrift zählt auf die vertragliche Obergrenze | Ist + Gutschrift ≤ 110 % der Sollzeit | Die Gutschrift selbst ist belegt (§ 4 Abs. 1 EFZG); dass die Obergrenze als Grenze des Arbeitszeitkontos gilt, ist gesetzt. Ohne diese Setzung dürfte eine kranke Person zusätzlich bis an die Obergrenze eingeplant werden | mittel — erzeugt bei 80 % Decke einzelne offene Dienste der Optimierung |
 
 Die Annahmen mit hoher Sensitivität (A3, A7, A7b) gehören in die Limitationen der Hausarbeit und
 eignen sich als Sensitivitätsanalyse: Der Generator ist parametrisiert, ein Lauf mit
@@ -491,6 +596,8 @@ Wunscherfüllung gegen `request_off_weight`.
 - Pflegepersonaluntergrenzen 2026, GKV-Spitzenverband — <https://www.gkv-spitzenverband.de/krankenversicherung/krankenhaeuser/pflegepersonaluntergrenzen/ppu_2026/ppug_2026.jsp>
 - Vereinbarung nach § 137i Abs. 4 SGB V über den Nachweis zur Einhaltung der Pflegepersonaluntergrenzen 2026 (Bezugsbestände 12:00 / 00:00 Uhr) — <https://www.gkv-spitzenverband.de/media/dokumente/krankenversicherung_1/krankenhaeuser/pflegepersonaluntergrenzen/kh_ppug2026/2025_12_01_PpUG-Nachweis-Vereinbarung_2026_inkl_Anlagen_1-5.pdf>
 - Pflegepersonalbemessungsverordnung (PPBV) / PPR 2.0, Grundwert und Fallwert — <https://planerio.de/blog/ppbv/>
+- PpUGV 2026, Übersicht der Verhältniszahlen je pflegesensitivem Bereich (Tag-/Nachtschicht, Hilfskraftanteil) — <https://planerio.de/blog/ppugv/>
+- Pflegepersonal-Untergrenzen 2026, unabhängige Bestätigung der Verhältniszahlen für Intensivmedizin, Geriatrie und Herzchirurgie — <https://msi-partners.de/artikel/pflegepersonal-untergrenzen-ppugv-2026>
 - TVöD-K § 6 Regelmäßige Arbeitszeit — <https://www.tv-oed.de/tv-kommunaler-bereich/tvoed-k-krankenhaeuser/tvoed_k_006>
 - TVöD-K § 26 Erholungsurlaub — <https://www.tv-oed.de/tv-kommunaler-bereich/tvoed-k-krankenhaeuser/tvoed_k_026>
 

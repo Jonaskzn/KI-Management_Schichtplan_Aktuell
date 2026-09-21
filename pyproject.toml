@@ -1,0 +1,19 @@
+[project]
+name = "careplan-schichtplanung"
+version = "0.2.0"
+description = "Prototyp zur KI-gestützten Personal- und Schichtplanung in der Pflege"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "streamlit>=1.61.1",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+# Nur für die Erzeugung des synthetischen Datensatzes nötig, nicht für die App.
+data = [
+    "numpy>=1.26",
+]
+
+[tool.uv]
+package = false

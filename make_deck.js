@@ -124,7 +124,7 @@ function chartSlide(s, title, takeaway, img, aspect, notes) {
   s.addImage({ path: img, x: M, y: 1.85, w: iw, h: ih });
   const bx = M + iw + 0.45;
   const bw = W - bx - M;
-  card(s, bx, 1.85, bw, Math.max(ih, 2.2));
+  card(s, bx, 1.85, bw, Math.max(ih, 0.4 + notes.length * 1.35));
   notes.forEach((n, i) => {
     s.addText(n.t, {
       x: bx + 0.3, y: 2.1 + i * 1.35, w: bw - 0.6, h: 0.35, isTextBox: true, margin: 0,
@@ -143,7 +143,7 @@ titleSlide(s,
   "WPM KI UND MANAGEMENT · USE CASE",
   "KI-gestützte Schichtplanung in der Pflege",
   "Was eine Optimierung gegenüber regelbasierter Excel-Planung wirklich leistet —\nund unter welchen Bedingungen sie es nicht tut.",
-  "Prototyp und Evaluation über 180 Dienstpläne · Projektteam · Wintersemester");
+  "Prototyp und Evaluation über 270 Dienstpläne · Projektteam · Wintersemester");
 s.addNotes("Einstieg: Dienstpläne in der Pflege werden überwiegend manuell erstellt. Wir haben geprüft, ob und wann sich Optimierung lohnt. Die Antwort ist differenzierter als erwartet.");
 
 // ---------- 2 Ausgangslage -------------------------------------------------
@@ -283,7 +283,7 @@ head(s, "Versuchsaufbau", "Eine einzelne Instanz beweist nichts — also 15 davo
 stat(s, M, 2.0, 2.75, "5", "Zufallsseeds:\nandere Belegung, Belegschaft, Ausfälle", NAVY);
 stat(s, M + 3.0, 2.0, 2.75, "3", "Personaldecken:\n100 %, 90 %, 80 % des Bedarfs", NAVY);
 stat(s, M + 6.0, 2.0, 2.75, "3", "Ausfallszenarien:\nkeine, verteilt, Ausfallwelle", NAVY);
-stat(s, M + 9.0, 2.0, 2.93, "180", "Pläne insgesamt,\nvier Verfahrensvarianten", ORANGE);
+stat(s, M + 9.0, 2.0, 2.93, "270", "Pläne insgesamt,\nsechs Verfahrensvarianten", ORANGE);
 s.addText("Die Personaldecke steuert, ob die Aufgabe überhaupt lösbar ist — ohne diese " +
   "Variation hätten wir nur gemessen, dass beide Verfahren eine leichte Aufgabe lösen. " +
   "Die beiden Ausfallszenarien tragen bewusst dasselbe Ausfallvolumen und unterscheiden " +
@@ -298,18 +298,18 @@ s.addNotes("80 Prozent Personaldecke ist keine exotische Annahme — sie bildet 
 // ---------- 9 Ergebnis Regelkonformitaet ----------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 1: Regelkonformität unter Knappheit",
-  "Bei bedarfsgerechter Besetzung sind beide gleich gut. Der Unterschied entsteht erst, wenn es eng wird.",
-  IMG("01_regelkonformitaet.png"), 1.451, [
+  "Bei bedarfsgerechter Besetzung sind beide nahezu gleich regelkonform. Der Unterschied entsteht, wenn es eng wird.",
+  IMG("01_regelkonformitaet.png"), 1.366, [
     { t: "Bei 80 % Personaldecke", d: "war kein einziger Plan der Baseline vollständig regelkonform — gegenüber 100 % der optimierten Pläne." },
-    { t: "Im Mittel 4,7 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
-    { t: "Besetzungsquote", d: "95,2 % gegenüber 100,0 % — 92 unbesetzte Dienste gegenüber keinem." },
+    { t: "Im Mittel 6,5 Untergrenzen­verstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
+    { t: "Besetzungsquote", d: "93,9 % gegenüber 99,7 % — 113 unbesetzte Dienste gegenüber 10, und diese 10 alle oberhalb der Untergrenze." },
   ]);
 s.addNotes("Das ist die Kernfolie. Betonen: Der Mehrwert entsteht nicht im Normalbetrieb, sondern genau dort, wo es eng wird.");
 
 // ---------- 10 Ergebnis Lastverteilung ------------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 2: Vier von zehn arbeiten jedes Wochenende",
-  "Gleiche Besetzungsquote, null Rechtsverstöße auf beiden Seiten — und trotzdem ein völlig anderer Monat.",
+  "Gleiche Daten, gleiche Regeln — und schon bei bedarfsgerechter Decke ein völlig anderer Monat.",
   IMG("04_lastverteilung.png"), 2.221, [
     { t: "41 % gegen 0,3 %", d: "So groß ist der Anteil der Belegschaft, der in den Plänen der Heuristik an allen vier Wochenenden im Dienst ist." },
     { t: "Kein Machbarkeitsproblem", d: "Auf denselben Daten findet die Optimierung eine Verteilung, in der 88 % genau auf dem Richtwert von zwei Wochenenden liegen." },
@@ -322,22 +322,22 @@ s = pres.addSlide();
 chartSlide(s, "Ergebnis 3: Reaktion auf kurzfristige Ausfälle",
   "Zwei Befunde — einer über die Zielfunktion, einer über die Messung selbst.",
   IMG("03_planstabilitaet.png"), 2.003, [
-    { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur 51 % der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 95 %." },
-    { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 14,9 statt 19,7 geänderte Dienste je Monat — ein Viertel weniger Umstellungen für die Mitarbeitenden." },
-    { t: "Gegengeprüft", d: "Beide denselben Plan reparieren lassen: 95,0 % gegen 91,8 %. Nur aus einer Hand sinkt die Zahl auf 14,9." },
+    { t: "Links: die Zielfunktion", d: "Neu zu optimieren erhält nur rund ein Viertel der Dienste. Erst mit „möglichst wenig ändern“ im Modell steigt der Wert auf 92 %." },
+    { t: "Rechts: der Alltag", d: "Excel-Welt gegen KI-Welt: 22,8 statt 30,3 geänderte Dienste je Monat mit Ausfällen — ein Viertel weniger Umstellungen." },
+    { t: "Gegengeprüft", d: "Beide denselben Plan reparieren lassen: 92,4 % gegen 88,2 %. Nur aus einer Hand sinkt die Zahl auf 22,8." },
   ]);
-s.addNotes("Drei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war, deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste. Drittens, falls jemand nach einem gemeinsamen Ausgangsplan fragt - wir haben alle vier Kombinationen gerechnet. Geaenderte Dienste: Excel-Plan von Excel repariert 19,5. Excel-Plan von MILP 25,2. MILP-Plan von Excel 24,8. MILP-Plan von MILP 14,9. Zeilenweise aendert MILP immer mehr, weil es die Maengel des geerbten Plans mitbehebt. Nur die Diagonale erreicht 14,9 - der Vorteil ist systemisch, Planung und Anpassung gehoeren zusammen. Genau deshalb fragt die Leitfrage nach beidem.");
+s.addNotes("Drei Punkte. Erstens die Zielfunktion - unser methodischer Kernbefund. Zweitens die Messung: Planstabilitaet als Prozentwert haengt davon ab, wie gut der Ausgangsplan war, deshalb zeigen wir rechts die absolute Zahl geaenderter Dienste. Drittens, falls jemand nach einem gemeinsamen Ausgangsplan fragt - wir haben alle vier Kombinationen gerechnet. Geaenderte Dienste je gestoertem Plan: Excel-Plan von Excel repariert 30,3. Excel-Plan von MILP 34,8. MILP-Plan von Excel 36,0. MILP-Plan von MILP 22,8. Auf dem Excel-Plan aendert MILP mehr, weil es die Maengel des geerbten Plans mitbehebt. Nur die Diagonale erreicht 22,8 - der Vorteil ist systemisch, Planung und Anpassung gehoeren zusammen. Genau deshalb fragt die Leitfrage nach beidem.");
 
 // ---------- 12 Ergebnis Ausfallstruktur -----------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 4: Der Zielkonflikt, den Excel nicht sichtbar macht",
-  "Gleichmäßige Last oder stabiler Plan — unter der Ausfallwelle ist beides zugleich nicht zu haben.",
+  "Gleichmäßige Last oder stabiler Plan — die Gewichtung entscheidet, wie viel man von beidem bekommt.",
   IMG("05_zielkonflikt.png"), 1.847, [
-    { t: "Nicht die Welle", d: "Bei vollständiger Neuplanung hält die Optimierung die Spanne auch unter S2 auf 16 Punkten. Die Heuristik liegt bei 33." },
-    { t: "Sondern die Zielfunktion", d: "Gewicht 200 für „nicht ändern“ gegen 0,02 für Lastausgleich. Dann füllt das Modell nur noch Lücken — wie die Heuristik." },
+    { t: "Vorn bleibt die Optimierung", d: "Unter der Welle liegt ihre Spanne bei 19 Punkten (Neuplanung) oder 26 (reaktiv). Die Heuristik liegt reaktiv bei 32." },
+    { t: "Die Differenz ist die Zielfunktion", d: "Gewicht 200 für „nicht ändern“ gegen 0,02 für Lastausgleich. Der Schritt von 19 auf 26 Punkte ist der Preis der Planungsruhe." },
     { t: "Eine Führungsfrage", d: "Welches Ziel schwerer wiegt, entscheidet nicht das Verfahren. Der Prototyp macht den Preis beider Optionen sichtbar." },
   ]);
-s.addNotes("Haeufige Rueckfrage: Warum ist der Abstand bei Spanne und Stabilitaet unter S2 so klein? Drei Punkte. Erstens: Er liegt an der Zielfunktion, nicht an der Welle - bei voller Neuplanung bleibt die Optimierung klar vorn. Zweitens: Die Heuristik erreicht ihre Spanne teilweise dadurch, dass sie Dienste gar nicht besetzt - unbesetzte Dienste erzeugen weder Auslastung noch Planaenderung. Drittens, falls jemand fragt, ob die Optimierung es nicht besser koennte: Doch. Wir haben das Gewicht keep variiert. Bei keep gleich 20 liegt sie bei der Spanne mit 0,243 gegen 0,391 vorn und bei den weichen Abweichungen mit 2,4 gegen 16,0. Bei keep gleich 5 erreicht sie 0,082 und null weiche Abweichungen. Der Preis: Planstabilitaet faellt von 93 auf 68 Prozent, die Zahl geaenderter Dienste steigt von 20 auf 109. Das ist die Sensitivitaetsanalyse in Abschnitt 4.5.");
+s.addNotes("Haeufige Rueckfrage: Koennte die Optimierung nicht beides? Teilweise. Die Differenz zwischen 19 und 26 Punkten Spanne ist der Preis der Vorgabe, moeglichst wenig zu aendern - Gewicht 200 fuer beibehalten gegen 0,02 fuer Lastausgleich. Mit Lastausgleich 0,1 statt 0,02 erreicht sie auf dem Plan der Heuristik unter der Welle die halbe Spanne (0,170 gegen 0,379) bei hoeherer Planstabilitaet (92,7 gegen 91,8 Prozent). Senkt man stattdessen das Gewicht fuer beibehalten auf 5, faellt die Spanne auf 0,076, aber die Stabilitaet auf 68 Prozent und die Zahl geaenderter Dienste steigt von 19 auf 108. Das ist die Sensitivitaetsanalyse in Abschnitt 4.5. Falls jemand nach der frueheren Fassung fragt: Dort lagen beide Verfahren unter der Welle gleichauf. Das war ein Artefakt fehlender Krankheitsgutschrift - Kranke galten als unterausgelastet.");
 
 // ---------- 13 Business Impact --------------------------------------------
 s = pres.addSlide();
@@ -349,9 +349,9 @@ s.addText("Gemessen", {
 });
 s.addText([
   { text: "Regelkonformität unter Knappheit: 100 % gegenüber 0 % der Pläne", options: { bullet: true, breakLine: true } },
-  { text: "Ungleichverteilung der Last um Faktor fünf reduziert — aber nur ohne Ausfallwelle", options: { bullet: true, breakLine: true } },
-  { text: "Planänderungen je Monat: 14,9 statt 19,7 — ein Viertel weniger", options: { bullet: true, breakLine: true } },
-  { text: "Umplanung in unter einer Sekunde", options: { bullet: true } },
+  { text: "Spanne der Auslastung 5 statt 33 Prozentpunkte, nach Ausfällen 25 statt 32", options: { bullet: true, breakLine: true } },
+  { text: "Planänderungen je Monat mit Ausfällen: 22,8 statt 30,3 — ein Viertel weniger", options: { bullet: true, breakLine: true } },
+  { text: "Umplanung in rund einer halben Sekunde", options: { bullet: true } },
 ], {
   x: M + 0.35, y: 2.75, w: 5.15, h: 2.9, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 14, color: INK2, lineSpacing: 20, paraSpaceAfter: 8,
@@ -379,12 +379,14 @@ bulletRows(s, [
   { t: "Fünf Seeds sind wenig", d: "Die Streuungen tragen die Kernaussagen, für Inferenzstatistik reicht die Stichprobe nicht" },
   { t: "Die Baseline ist keine echte Excel-Planung", d: "Sie ist konsistenter und schneller als ein Mensch — der reale Unterschied dürfte größer sein" },
   { t: "Gewichte sind gesetzt, nicht hergeleitet", d: "Wie stark Unterbesetzung gegen Lastverteilung zählt, ist eine Managemententscheidung" },
-], M, 1.95, 5.7, 1.3);
+  { t: "Alle Ausfälle sind beim Umplanen bekannt", d: "Real kommen sie einzeln — eine rollierende Umplanung wäre der härtere Test" },
+], M, 1.95, 5.7, 1.2);
 bulletRows(s, [
   { t: "Alle Daten sind synthetisch", d: "Die Höhe der Kennzahlen ist nicht auf eine konkrete Station übertragbar" },
   { t: "Optimierung ersetzt kein Personal", d: "Bei extremer Knappheit verwaltet auch das beste Verfahren nur noch den Mangel" },
   { t: "Verantwortung bleibt beim Menschen", d: "Der Prototyp liefert eine Empfehlung, keine Freigabe — die Leitung entscheidet" },
-], M + 6.3, 1.95, 5.7, 1.3);
+  { t: "Ein Modellfehler fiel spät auf", d: "Krankheitstage wurden zunächst nicht gutgeschrieben — drei Aussagen sind zurückgenommen" },
+], M + 6.3, 1.95, 5.7, 1.2);
 s.addNotes("Ehrlichkeit ist hier ein Pluspunkt. Besonders der zweite Punkt links: Wir überschätzen unsere eigene Baseline bewusst nicht.");
 
 // ---------- 14 Fazit -------------------------------------------------------
@@ -400,7 +402,7 @@ s.addText("Optimierung schlägt Heuristik dann,\nwenn die richtigen Ziele im Mod
 });
 s.addText([
   { text: "Bei der Erstellung ", options: { bold: true, color: ICE } },
-  { text: "liegt der Mehrwert nicht in der Machbarkeit, sondern in Regelkonformität unter Knappheit und in der Verteilungsgerechtigkeit. Ist genug Personal da, genügt auch eine Regelheuristik.", options: { color: ICE } },
+  { text: "liegt der Mehrwert nicht in der Machbarkeit, sondern in Regelkonformität unter Knappheit und in der Verteilungsgerechtigkeit. Ist genug Personal da, sichert auch eine Regelheuristik die Rechtskonformität — den Unterschied macht dann die Lastverteilung.", options: { color: ICE } },
 ], {
   x: M, y: 3.35, w: 11.9, h: 1.0, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 16, lineSpacing: 24,

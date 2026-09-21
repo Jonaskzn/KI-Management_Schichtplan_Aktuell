@@ -14,6 +14,9 @@ generate_dataset.py         Generator für den Datensatz (Seed 20261133)
 validate_dataset.py         Prüfskript für den Datensatz
 campaign.py                 Evaluationskampagne über mehrere Instanzen
 evaluation_results.csv      Rohergebnisse der Kampagne (270 Pläne)
+instanzen/                  Replikationsdatensätze und -ergebnisse anderer Stationstypen
+replikation.py              Auswertung der Replikation über Stationstypen
+auswertung.py               berechnet jede Kennzahl aus ERGEBNISSE.md aus den Rohdaten
 ERGEBNISSE.md               Evaluation: Aufbau, Ergebnisse, Limitationen
 make_charts.py              Abbildungen aus den Kampagnendaten
 make_gantt.py               Gantt-Diagramm des Projektverlaufs (Termine anpassen!)
@@ -32,9 +35,11 @@ uv sync
 uv run streamlit run streamlit_app.py
 ```
 
-Die App lädt `schichtplan_datensatz.csv` aus dem Repository. Über den Uploader in der
-Seitenleiste lässt sich stattdessen eine eigene Variante einspielen — nützlich für
-Sensitivitätsanalysen mit anderem Seed oder anderer Ausfallrate.
+Die App lädt `schichtplan_datensatz.csv` aus dem Repository. In der Seitenleiste lässt sich
+zwischen der Hauptstation und den drei Replikationsstationen umschalten (Geriatrie,
+Herzchirurgie, Intensivmedizin); über den Uploader lässt sich zusätzlich eine eigene
+Variante einspielen — nützlich für Sensitivitätsanalysen mit anderem Seed oder anderer
+Ausfallrate.
 
 ## Aufbau
 
@@ -53,6 +58,11 @@ selbst behaupten — sonst wäre der spätere KPI-Vergleich zirkulär.
 **Reaktive Umplanung.** Bei einem Ausfall kann der bestehende Plan festgehalten und nur
 der betroffene Dienst neu besetzt werden (Schalter in der Seitenleiste). Der Unterschied
 zur vollständigen Neuplanung wird als Planstabilität gemessen.
+
+**Krankheit ist keine Unterauslastung.** Fällt jemand aus, wird der ausgefallene Dienst laut
+Ausgangsplan gutgeschrieben (Entgeltausfallprinzip, § 4 Abs. 1 EFZG) und zählt wie
+gearbeitete Zeit — für die Auslastung, die Zielarbeitszeit und die vertragliche Obergrenze.
+Niemand muss Krankheit nacharbeiten. `krankheitsgutschrift()` in `planner.py`.
 
 ## Die zwei Verfahren
 
@@ -82,8 +92,13 @@ Van den Bergh et al. 2013).
 ```bash
 python test_planner.py       # Planungslogik gegen den Datensatz
 python validate_dataset.py   # Datensatz gegen Schema, Recht, Erfüllbarkeit, PpUGV
+python validate_dataset.py instanzen/datensatz_intensiv.csv   # dieselben Pruefungen, andere Station
 python campaign.py           # Evaluationskampagne, 15 Instanzen (~15 Min.)
 python campaign.py --report  # aggregierte Auswertung der Kampagne
+python auswertung.py         # alle Kennzahlen aus ERGEBNISSE.md
+python auswertung.py --baseline   # Abschnitt 7.3: Nachtdienst-Richtwert der Heuristik
+python campaign.py --ward=geriatrie          # Replikation auf anderem Stationstyp
+python replikation.py        # Vergleich der Befunde ueber alle Stationstypen
 python sensitivitaet.py      # Sensitivitaet des Gewichts 'keep' (~1 Min.)
 python wochenend_analyse.py  # Verteilung der Wochenenddienste (~2 Min.)
 ```

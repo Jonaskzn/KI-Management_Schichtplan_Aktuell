@@ -175,7 +175,7 @@ for scenario in ["S1 - verteilte Ausfaelle", "S2 - Ausfallwelle"]:
     reaktiv = P.plan_milp(ctx, scenario, reference=milp_ref, time_limit_s=60)
     s_voll = P.stability(milp_ref, voll)
     s_reak = P.stability(milp_ref, reaktiv)
-    k_reak = P.evaluate(ctx, reaktiv)
+    k_reak = P.evaluate(ctx, reaktiv, basisplan=milp_ref)
     print(f"        {scenario[:2]}: Neuplanung {s_voll['planstabilitaet']:>6.1%} Stabilitaet, "
           f"reaktiv {s_reak['planstabilitaet']:>6.1%} "
           f"({s_reak['geaenderte_zuweisungen']} Aenderungen, "
@@ -186,6 +186,43 @@ for scenario in ["S1 - verteilte Ausfaelle", "S2 - Ausfallwelle"]:
           f"{scenario[:2]}: reaktiver Plan ohne harte Regelverstoesse")
     check(k_reak["untergrenzen_verstoesse"] == 0,
           f"{scenario[:2]}: reaktiver Plan haelt die Untergrenze ein")
+
+print("\nKrankheitsgutschrift (Entgeltausfallprinzip, § 4 Abs. 1 EFZG)")
+S2 = "S2 - Ausfallwelle"
+krank = P.scenario_absences(ctx, S2)
+gut = P.krankheitsgutschrift(ctx, S2, basisplan=milp_ref)
+erwartet = sum(ctx.shifts[milp_ref.assignments[k]]["net"]
+               for k in krank if k in milp_ref.assignments)
+print(f"        S2: {sum(1 for k in krank if k in milp_ref.assignments)} ausgefallene "
+      f"Dienste, Gutschrift {sum(gut.values())} Minuten")
+check(sum(gut.values()) == erwartet,
+      "Gutschrift = Nettodauer der ausgefallenen Dienste laut Ausgangsplan")
+check(all(e in {x for x, _ in krank} for e in gut),
+      "Gutschrift nur fuer Personen mit Ausfall")
+check(not P.krankheitsgutschrift(ctx, "S0 - keine kurzfristigen Ausfaelle",
+                                 basisplan=milp_ref),
+      "ohne Ausfall keine Gutschrift")
+check(not P.krankheitsgutschrift(ctx, S2, basisplan=None),
+      "ohne Ausgangsplan keine Gutschrift")
+# Kern der Korrektur: Auch bei maximaler Gewichtung der Lastverteilung muss
+# niemand ausgefallene Dienste nacharbeiten. Kranke tragen hoechstens ihren
+# Anteil an der Vertretung - hier: nicht mehr zusaetzliche Dienste als
+# ausgefallene.
+w_fair = dict(P.WEIGHTS)
+w_fair["fair"] = 1.0
+fair_plan = P.plan_milp(ctx, S2, reference=milp_ref, weights=w_fair, time_limit_s=60)
+nacharbeit = []
+for e in {x for x, _ in krank}:
+    verloren = sum(1 for (x, d) in krank if x == e and (x, d) in milp_ref.assignments)
+    extra = sum(1 for (x, d) in fair_plan.assignments
+                if x == e and (x, d) not in milp_ref.assignments)
+    if verloren >= 2 and extra >= verloren:
+        nacharbeit.append(e)
+check(not nacharbeit,
+      f"keine vollstaendige Nacharbeit bei Prioritaet Verteilungsgerechtigkeit {nacharbeit}")
+k_fair = P.evaluate(ctx, fair_plan, basisplan=milp_ref)
+check(k_fair["harte_verstoesse"] == 0,
+      "Plan mit Gutschrift ohne harte Regelverstoesse (inkl. Obergrenze)")
 
 print("\n" + "=" * 68)
 print(f"Fehler gesamt: {len(FAIL)}")

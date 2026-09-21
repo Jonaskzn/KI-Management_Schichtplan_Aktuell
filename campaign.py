@@ -18,8 +18,14 @@ sichert - genau das ist die Frage, die eine einzelne Instanz offenlaesst.
 
 Ergebnis: evaluation_results.csv (eine Zeile je Instanz x Szenario x Verfahren)
 
-    python campaign.py                # voller Lauf
-    python campaign.py --quick        # kleiner Probelauf
+    python campaign.py                     # voller Lauf (Innere Medizin)
+    python campaign.py --quick             # kleiner Probelauf
+    python campaign.py --ward=geriatrie    # Replikation auf anderem Stationstyp
+
+Der dritte Aufruf ist die Probe auf die externe Validitaet: Stationstyp,
+Bettenzahl, Verhaeltniszahl nach PpUGV und Qualifikationsmix aendern sich,
+Schema des Datensatzes und planner.py bleiben unveraendert. Halten die Befunde
+auch dort, sind sie nicht an eine einzelne Station gebunden.
 """
 
 from __future__ import annotations
@@ -42,20 +48,23 @@ TIME_LIMIT = 30.0
 REFERENCE_SCENARIO = "S0 - keine kurzfristigen Ausfaelle"
 
 FIELDS = [
-    "seed", "staffing_factor", "headcount", "fte", "fte_netto_bedarf",
+    "ward", "seed", "staffing_factor", "headcount", "fte", "fte_netto_bedarf",
     "fte_brutto_ziel", "soll_dienste", "scenario", "method",
     "besetzungsquote", "offene_slots", "untergrenzen_verstoesse",
     "harte_verstoesse", "weiche_abweichungen", "qualifikationsverstoesse",
     "hilfskraftanteil", "auslastung_mittel", "auslastung_streuung",
     "auslastung_spanne", "arbeitszeitabweichung", "planstabilitaet",
     "geaenderte_zuweisungen", "planungszeit_s", "solver_status",
+    "krankheitsgutschrift_min",
 ]
 
 
-def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
+def run_instance(seed: int, factor: float, time_limit: float,
+                 ward: str = "innere") -> list[dict]:
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "instanz.csv")
-        meta = G.write_instance(path, seed=seed, staffing_factor=factor)
+        meta = G.write_instance(path, seed=seed, staffing_factor=factor,
+                                ward=ward)
         df = P.load_dataset(path)
     ctx = P.build_context(df)
 
@@ -69,11 +78,16 @@ def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
         # Ausgangsplan. Nur auf identischem Ausgangsplan ist die Planstabilitaet
         # zwischen den Verfahren vergleichbar - ein schlechter Ausgangsplan
         # laesst sich billiger unveraendert lassen als ein guter.
+        # Der zweite Eintrag ist jeweils der Ausgangsplan: Gegen ihn wird die
+        # Planstabilitaet gemessen, und aus ihm wird die Krankheitsgutschrift
+        # berechnet (Entgeltausfallprinzip) - auch bei der Neuplanung, denn
+        # der Dienstplan, der bei der Krankmeldung galt, ist derselbe.
         plans = {
-            "Greedy": (P.plan_greedy(ctx, scenario), ref_greedy),
+            "Greedy": (P.plan_greedy(ctx, scenario, basisplan=ref_greedy), ref_greedy),
             "Greedy reaktiv": (P.plan_greedy(ctx, scenario,
                                              fixed=ref_greedy.assignments), ref_greedy),
-            "MILP": (P.plan_milp(ctx, scenario, time_limit_s=time_limit), ref_milp),
+            "MILP": (P.plan_milp(ctx, scenario, time_limit_s=time_limit,
+                                 basisplan=ref_milp), ref_milp),
             "MILP reaktiv": (P.plan_milp(ctx, scenario, reference=ref_milp,
                                          time_limit_s=time_limit), ref_milp),
             # Kreuzvergleich: gleicher Ausgangsplan, unterschiedliches Verfahren
@@ -83,10 +97,10 @@ def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
                                                  time_limit_s=time_limit), ref_greedy),
         }
         for name, (plan, ref) in plans.items():
-            k = P.evaluate(ctx, plan)
+            k = P.evaluate(ctx, plan, basisplan=ref)
             s = P.stability(ref, plan)
             rows.append({
-                "seed": seed, "staffing_factor": factor,
+                "ward": ward, "seed": seed, "staffing_factor": factor,
                 "headcount": meta["headcount"], "fte": meta["fte"],
                 "fte_netto_bedarf": meta["fte_netto_bedarf"],
                 "fte_brutto_ziel": meta["fte_brutto_ziel"],
@@ -107,33 +121,43 @@ def run_instance(seed: int, factor: float, time_limit: float) -> list[dict]:
                 "geaenderte_zuweisungen": s["geaenderte_zuweisungen"],
                 "planungszeit_s": round(k["planungszeit_s"], 3),
                 "solver_status": plan.info.get("status", ""),
+                "krankheitsgutschrift_min": k["krankheitsgutschrift_min"],
             })
     return rows
 
 
-def main(quick: bool = False):
+def ergebnisdatei(ward: str) -> str:
+    """Hauptstation schreibt nach evaluation_results.csv, Replikationen daneben."""
+    if ward == "innere":
+        return RESULTS
+    return os.path.join(BASE, "instanzen", f"evaluation_{ward}.csv")
+
+
+def main(quick: bool = False, ward: str = "innere"):
     seeds = SEEDS[:2] if quick else SEEDS
     factors = [1.00, 0.80] if quick else FACTORS
     limit = 10.0 if quick else TIME_LIMIT
+    ziel = ergebnisdatei(ward)
+    os.makedirs(os.path.dirname(ziel), exist_ok=True)
 
     total = len(seeds) * len(factors)
     t0 = time.perf_counter()
-    with open(RESULTS, "w", newline="", encoding="utf-8") as f:
+    with open(ziel, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
         done = 0
         for factor in factors:
             for seed in seeds:
                 t = time.perf_counter()
-                rows = run_instance(seed, factor, limit)
+                rows = run_instance(seed, factor, limit, ward)
                 writer.writerows(rows)
                 f.flush()
                 done += 1
-                print(f"[{done}/{total}] Seed {seed}, Faktor {factor:.2f} "
-                      f"-> {len(rows)} Zeilen in {time.perf_counter() - t:.1f}s",
-                      flush=True)
+                print(f"[{done}/{total}] {ward}, Seed {seed}, "
+                      f"Faktor {factor:.2f} -> {len(rows)} Zeilen in "
+                      f"{time.perf_counter() - t:.1f}s", flush=True)
     print(f"\nFertig in {(time.perf_counter() - t0) / 60:.1f} Minuten "
-          f"-> {os.path.basename(RESULTS)}")
+          f"-> {os.path.basename(ziel)}")
 
 
 
@@ -225,7 +249,11 @@ def report(path: str = RESULTS) -> str:
 
 
 if __name__ == "__main__":
+    ward = "innere"
+    for a in sys.argv[1:]:
+        if a.startswith("--ward="):
+            ward = a.split("=", 1)[1]
     if "--report" in sys.argv:
-        print(report())
+        print(report(ergebnisdatei(ward)))
     else:
-        main(quick="--quick" in sys.argv)
+        main(quick="--quick" in sys.argv, ward=ward)

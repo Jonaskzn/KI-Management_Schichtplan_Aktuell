@@ -120,7 +120,7 @@ function chartSlide(s, title, takeaway, img, aspect, notes) {
   s.addImage({ path: img, x: M, y: 1.85, w: iw, h: ih });
   const bx = M + iw + 0.45;
   const bw = W - bx - M;
-  card(s, bx, 1.85, bw, Math.max(ih, 2.2));
+  card(s, bx, 1.85, bw, Math.max(ih, 0.4 + notes.length * 1.35));
   notes.forEach((n, i) => {
     s.addText(n.t, {
       x: bx + 0.3, y: 2.1 + i * 1.35, w: bw - 0.6, h: 0.35, isTextBox: true, margin: 0,
@@ -237,18 +237,18 @@ s.addNotes("Hier ggf. kurze Live-Demo: Szenario umschalten, Ausfall melden, Plan
 // ---------- 5 Ergebnis 1 ---------------------------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 1: Regelkonformität unter Knappheit",
-  "Bei bedarfsgerechter Besetzung sind beide gleich gut. Der Unterschied entsteht erst, wenn es eng wird.",
-  IMG("01_regelkonformitaet.png"), 1.451, [
+  "Bei bedarfsgerechter Besetzung sind beide nahezu gleich regelkonform. Der Unterschied entsteht, wenn es eng wird.",
+  IMG("01_regelkonformitaet.png"), 1.366, [
     { t: "Bei 80 % Personaldecke", d: "war kein einziger Plan der Baseline vollständig regelkonform — gegenüber 100 % der optimierten Pläne." },
-    { t: "4,7 Untergrenzenverstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
-    { t: "92 unbesetzte Dienste", d: "lässt die Heuristik bei 80 % Decke stehen — die Optimierung keinen einzigen." },
+    { t: "6,5 Untergrenzenverstöße je Plan", d: "gegenüber null. Das ist ein Rechtsrisiko nach § 137i SGB V, kein Qualitätsdetail." },
+    { t: "113 unbesetzte Dienste", d: "lässt die Heuristik bei 80 % Decke stehen — die Optimierung 10, und jeden davon oberhalb der Untergrenze." },
   ]);
 s.addNotes("Die Kernfolie fuer den wirtschaftlichen Teil: Der Mehrwert entsteht nicht im Normalbetrieb, sondern genau dort, wo es eng wird.");
 
 // ---------- 6 Ergebnis 2 ---------------------------------------------------
 s = pres.addSlide();
 chartSlide(s, "Ergebnis 2: Vier von zehn arbeiten jedes Wochenende",
-  "Gleiche Besetzungsquote, null Rechtsverstöße auf beiden Seiten — und trotzdem ein völlig anderer Monat.",
+  "Gleiche Daten, gleiche Regeln — und schon bei bedarfsgerechter Decke ein völlig anderer Monat.",
   IMG("04_lastverteilung.png"), 2.221, [
     { t: "41 % gegen 0,3 %", d: "So groß ist der Anteil der Belegschaft, der in den Plänen der Heuristik an allen vier Wochenenden im Dienst ist." },
     { t: "Kein Machbarkeitsproblem", d: "Auf denselben Daten findet die Optimierung eine Verteilung, in der 88 % genau auf dem Richtwert von zwei Wochenenden liegen." },
@@ -261,9 +261,9 @@ s = pres.addSlide();
 chartSlide(s, "Ergebnis 3: Die Zielfunktion entscheidet",
   "Optimierung ist nur so gut wie die Ziele, die man ihr vorgibt — das war unser methodischer Kernbefund.",
   IMG("05_zielkonflikt.png"), 1.847, [
-    { t: "Neu optimieren war schlechter", d: "als die simple Heuristik: nur 51 % der Dienste blieben bestehen. Der Monat wird faktisch neu gemacht." },
-    { t: "Erst mit „wenig ändern“ im Modell", d: "stieg die Planstabilität auf 95 % — bei gleicher Besetzungsquote und in unter einer Sekunde." },
-    { t: "Der Preis ist messbar", d: "Gleichmäßige Last oder stabiler Plan: unter Druck ist beides zugleich nicht zu haben. Welches Ziel gewinnt, ist eine Führungsfrage." },
+    { t: "Neu optimieren war schlechter", d: "als die simple Heuristik: nur rund ein Viertel der Dienste blieb bestehen. Der Monat wird faktisch neu gemacht." },
+    { t: "Erst mit „wenig ändern“ im Modell", d: "stieg die Planstabilität auf 92 % — bei nahezu gleicher Besetzungsquote und in rund einer halben Sekunde." },
+    { t: "Der Preis ist messbar", d: "Unter der Welle steigt die Spanne der Auslastung von 19 auf 26 Prozentpunkte. Welches Ziel gewinnt, ist eine Führungsfrage." },
   ]);
 s.addNotes("Das ist unser methodischer Kernbefund und zugleich die ehrlichste Folie: Nicht das Verfahren entscheidet, sondern die Gewichtung der Ziele. Der Prototyp macht diesen Zielkonflikt entscheidbar, Excel macht ihn unsichtbar.");
 
@@ -280,10 +280,10 @@ s.addText("Im End-to-End-Vergleich gewinnt die Optimierung jede einzelne Kennzah
 });
 
 const facts = [
-  ["100 %", "Besetzungsquote\nstatt 98,2 %"],
-  ["0", "Untergrenzenverstöße\nstatt 1,84 je Plan"],
-  ["7 Pp.", "Spanne der Auslastung\nstatt 33 Prozentpunkte"],
-  ["14,9", "geänderte Dienste\nstatt 19,7 je Monat"],
+  ["99,7 %", "Besetzungsquote\nstatt 97,3 %"],
+  ["0", "Untergrenzenverstöße\nstatt 2,60 je Plan"],
+  ["25 Pp.", "Spanne der Auslastung\nstatt 32 Prozentpunkte"],
+  ["22,8", "geänderte Dienste\nstatt 30,3 je Monat"],
 ];
 facts.forEach((f, i) => {
   const x = M + i * 3.05;
@@ -303,7 +303,7 @@ facts.forEach((f, i) => {
 
 s.addText([
   { text: "Bei der Erstellung  ", options: { bold: true, color: WHITE } },
-  { text: "liegt der Mehrwert nicht in der Machbarkeit, sondern in Regelkonformität unter Knappheit und in Verteilungsgerechtigkeit. Ist genug Personal da, tut es auch eine Regelheuristik.", options: { color: ICE } },
+  { text: "liegt der Mehrwert nicht in der Machbarkeit, sondern in Regelkonformität unter Knappheit und in Verteilungsgerechtigkeit. Ist genug Personal da, sichert auch eine Regelheuristik die Rechtskonformität — den Unterschied macht dann die Lastverteilung.", options: { color: ICE } },
 ], {
   x: M, y: 3.85, w: W - 2 * M, h: 0.7, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 15, lineSpacing: 22,
@@ -317,7 +317,7 @@ s.addText([
 });
 s.addText([
   { text: "Beides zusammen  ", options: { bold: true, color: WHITE } },
-  { text: "ergibt mehr als die Summe: Nur wenn Planung und Anpassung aus demselben System kommen, sinkt die Zahl der Planänderungen auf 14,9. Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die Rechtssicherheit, aber nicht die Entlastung.", options: { color: ICE } },
+  { text: "ergibt mehr als die Summe: Nur wenn Planung und Anpassung aus demselben System kommen, sinkt die Zahl der Planänderungen auf 22,8. Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die Rechtssicherheit, aber nicht die Entlastung.", options: { color: ICE } },
 ], {
   x: M, y: 5.05, w: W - 2 * M, h: 0.9, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 15, lineSpacing: 22,
@@ -328,7 +328,7 @@ s.addText("Unsere Empfehlung: Optimierung einführen, wo die Personaldecke knapp
   x: M, y: 6.1, w: W - 2 * M, h: 0.7, isTextBox: true, margin: 0,
   fontFace: B, fontSize: 15, bold: true, color: ORANGE, lineSpacing: 22,
 });
-s.addNotes("Abschluss. Wichtig fuer die Diskussion: Wir unterscheiden strikt zwischen gemessenen Ergebnissen und geschaetztem Business Impact. Gemessen sind Regelkonformitaet, Lastverteilung, Planstabilitaet und Rechenzeit. Nicht gemessen, nur plausibel: Reduktion des manuellen Planungsaufwands, Wirkung auf Fluktuation, vermiedene Bettensperrungen.");
+s.addNotes("Die vier Zahlen sind Mittelwerte ueber die 30 gestoerten Plaene je Verfahren (Szenarien S1 und S2), also der Zustand nach Erstellung und Anpassung. Krankheitsbedingt ausgefallene Dienste sind nach dem Entgeltausfallprinzip (Paragraf 4 EFZG) gutgeschrieben. Abschluss. Wichtig fuer die Diskussion: Wir unterscheiden strikt zwischen gemessenen Ergebnissen und geschaetztem Business Impact. Gemessen sind Regelkonformitaet, Lastverteilung, Planstabilitaet und Rechenzeit. Nicht gemessen, nur plausibel: Reduktion des manuellen Planungsaufwands, Wirkung auf Fluktuation, vermiedene Bettensperrungen.");
 
 // ---------- schreiben ------------------------------------------------------
 const out = path.join(BASE, "Kurzpraesentation_Schichtplanung.pptx");

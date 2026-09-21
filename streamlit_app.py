@@ -20,6 +20,8 @@ Mitarbeitende sind pseudonyme IDs, Ausfaelle reine Verfuegbarkeitsereignisse.
 
 from __future__ import annotations
 
+import csv
+import glob
 import hashlib
 import io
 import os
@@ -82,21 +84,58 @@ def load_bytes(payload: bytes) -> pd.DataFrame:
     return P.load_dataset(io.BytesIO(payload))
 
 
+@st.cache_data(show_spinner=False)
+def verfuegbare_datensaetze() -> dict[str, str]:
+    """
+    Alle mitgelieferten Instanzen: die Hauptstation und die
+    Replikationsinstanzen anderer Stationstypen. Der Anzeigename wird aus dem
+    Datensatz selbst gelesen - auch der Stationsname steht in den Daten und
+    nicht im Code.
+    """
+    eintraege: dict[str, str] = {}
+    kandidaten = [DATA_FILE] + sorted(
+        glob.glob(os.path.join(os.path.dirname(DATA_FILE), "instanzen",
+                               "datensatz_*.csv")))
+    for pfad in kandidaten:
+        if not os.path.exists(pfad):
+            continue
+        try:
+            with open(pfad, newline="", encoding="utf-8") as fh:
+                erste = next(csv.DictReader(fh))
+            name = erste.get("ward_name") or os.path.basename(pfad)
+            betten = erste.get("beds", "?")
+            tag = erste.get("ppug_ratio_day", "?")
+            label = f"{name} ({betten} Betten, {float(tag):.0f}:1 tags)"
+        except Exception:                                  # noqa: BLE001
+            label = os.path.basename(pfad)
+        if pfad == DATA_FILE:
+            label += " - Standard"
+        eintraege[label] = pfad
+    return eintraege
+
+
 with st.sidebar:
     st.markdown("### Datengrundlage")
+    instanzen = verfuegbare_datensaetze()
+    wahl = st.selectbox(
+        "Station", list(instanzen), index=0,
+        help="Die mitgelieferten Instanzen unterscheiden sich in Bettenzahl, "
+             "Verhaeltniszahl nach PpUGV und Qualifikationsmix. Das Schema "
+             "des Datensatzes und der Planungscode sind identisch.")
     upload = st.file_uploader(
         "Eigenen Datensatz verwenden (CSV)", type="csv",
-        help="Optional. Ohne Upload wird schichtplan_datensatz.csv aus dem "
+        help="Optional. Ohne Upload wird die oben gewaehlte Instanz aus dem "
              "Repository geladen - so ist jeder Lauf reproduzierbar.")
 
 try:
+    gewaehlt = instanzen.get(wahl, DATA_FILE)
     if upload is not None:
         payload = upload.getvalue()
         source_label = f"Upload: {upload.name}"
-    elif os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "rb") as fh:
+    elif os.path.exists(gewaehlt):
+        with open(gewaehlt, "rb") as fh:
             payload = fh.read()
-        source_label = os.path.basename(DATA_FILE)
+        source_label = os.path.basename(gewaehlt)
     else:
         st.error("schichtplan_datensatz.csv wurde nicht gefunden. "
                  "Datei ins Repository legen oder oben hochladen.")
@@ -150,9 +189,11 @@ with st.sidebar:
                  "Planungsruhe (0,02): nur Luecken fuellen - hoechste "
                  "Planstabilitaet, eine geerbte Schieflage bleibt bestehen. "
                  "Ausgewogen (0,1): deutlich gleichmaessigere Auslastung bei "
-                 "praktisch unveraenderter Stabilitaet - im Mittel der beste "
+                 "rund einem Prozentpunkt weniger Stabilitaet - im Mittel der beste "
                  "Kompromiss. Verteilungsgerechtigkeit (1,0): die Last wird im "
                  "ganzen Monat neu verteilt, dafuer mehr geaenderte Dienste. "
+                 "Die Prioritaet wirkt auf die Anpassung bei Ausfaellen; der "
+                 "Ausgangsplan ist fuer alle drei Stufen derselbe. "
                  "Gemessene Wirkung in ERGEBNISSE.md, Abschnitt 4.5.")
         prio = PRIORITAETEN[prio_label]
         time_limit = st.slider("Rechenzeit je Plan (Sekunden)", 5, 120, 30, step=5,
@@ -190,17 +231,24 @@ manual_key = tuple(sorted(st.session_state.manual))
 # --------------------------------------------------------------------------
 
 def compute(method: str, scenario: str, manual_set, reference=None, limit=30,
-            fair: float | None = None):
+            fair: float | None = None, basisplan=None):
+    """
+    `reference` ist die Vorlage fuer die reaktive Umplanung, `basisplan` der
+    Dienstplan, der bei den Krankmeldungen galt - aus ihm wird die
+    Krankheitsgutschrift berechnet. Bei der vollstaendigen Neuplanung gibt es
+    keine Vorlage, der Basisplan fuer die Gutschrift bleibt aber derselbe.
+    """
     if method == "greedy":
         return P.plan_greedy(ctx, scenario, manual_absences=manual_set,
-                             fixed=reference.assignments if reference else None)
+                             fixed=reference.assignments if reference else None,
+                             basisplan=basisplan)
     weights = None
     if fair is not None and fair != P.WEIGHTS["fair"]:
         weights = dict(P.WEIGHTS)
         weights["fair"] = float(fair)
     return P.plan_milp(ctx, scenario, manual_absences=manual_set,
                        reference=reference, time_limit_s=float(limit),
-                       weights=weights)
+                       weights=weights, basisplan=basisplan)
 
 
 def cached(key, factory):
@@ -210,10 +258,15 @@ def cached(key, factory):
     return store[key]
 
 
-ref_key = (data_key, method, "REF", (), time_limit, prio)
+# Der Ausgangsplan (S0) wird immer mit den Standardgewichten erstellt - unabhaengig
+# von der gewaehlten Prioritaet. Sonst ginge jede Prioritaet von einem anderen
+# Ausgangsplan aus, und die Planstabilitaet waere zwischen den Prioritaeten nicht
+# vergleichbar: Gleiche Ausfaelle treffen in verschiedenen Plaenen
+# unterschiedlich viele Dienste. Die Prioritaet wirkt auf die Anpassung.
+ref_key = (data_key, method, "REF", (), time_limit)
 with st.spinner("Referenzplan wird berechnet ..."):
     reference = cached(ref_key, lambda: compute(method, REFERENCE_SCENARIO, set(),
-                                                limit=time_limit, fair=prio))
+                                                limit=time_limit))
 
 cur_key = (data_key, method, scenario, manual_key, reactive, time_limit, prio)
 is_reference = (scenario == REFERENCE_SCENARIO and not manual)
@@ -223,9 +276,9 @@ else:
     with st.spinner("Plan wird berechnet ..."):
         current = cached(cur_key, lambda: compute(
             method, scenario, manual, reference if reactive else None, time_limit,
-            fair=prio))
+            fair=prio, basisplan=reference))
 
-kpi = P.evaluate(ctx, current)
+kpi = P.evaluate(ctx, current, basisplan=reference, manual_absences=manual)
 stab = P.stability(reference, current)
 
 
@@ -321,14 +374,15 @@ with tabs[1]:
         for label, m in METHODS.items():
             ref_m = m if modus == "self" else modus
             with st.spinner(f"{label} ..."):
-                m_ref = cached((data_key, ref_m, "REF", (), time_limit, prio),
+                m_ref = cached((data_key, ref_m, "REF", (), time_limit),
                                lambda r=ref_m: compute(r, REFERENCE_SCENARIO, set(),
-                                                       limit=time_limit, fair=prio))
+                                                       limit=time_limit))
                 m_cur = cached((data_key, m, scenario, manual_key, ref_m, time_limit,
                                 prio),
                                lambda m=m, r=m_ref: compute(m, scenario, manual, r,
-                                                            time_limit, fair=prio))
-            k = P.evaluate(ctx, m_cur)
+                                                            time_limit, fair=prio,
+                                                            basisplan=r))
+            k = P.evaluate(ctx, m_cur, basisplan=m_ref, manual_absences=manual)
             s = P.stability(m_ref, m_cur)
             rows.append({
                 "Verfahren": label,
@@ -456,9 +510,11 @@ with tabs[4]:
         hours = hours.join(ctx.staff[["role", "employment_pct"]], on="employee_id")
         show = hours.assign(**{
             "Ist (h)": (hours["ist_min"] / 60).round(1),
+            "Gutschrift Krankheit (h)": (hours["gutschrift_min"] / 60).round(1),
             "Soll (h)": (hours["soll_min"] / 60).round(1),
             "Abweichung (h)": (hours["abweichung_min"] / 60).round(1),
-        })[["employee_id", "role", "employment_pct", "Ist (h)", "Soll (h)",
+        })[["employee_id", "role", "employment_pct", "Ist (h)",
+            "Gutschrift Krankheit (h)", "Soll (h)",
             "Abweichung (h)", "abweichung_pct"]].rename(columns={
                 "employee_id": "ID", "role": "Rolle", "employment_pct": "Umfang",
                 "abweichung_pct": "Abweichung (%)"})
@@ -466,8 +522,12 @@ with tabs[4]:
                      hide_index=True)
         st.bar_chart(hours.set_index("employee_id")["abweichung_pct"])
     st.caption("Soll = Vertragskapazitaet im Horizont, anteilig um geplante "
-               "Abwesenheiten gekuerzt. Auszubildende sind nicht enthalten, da sie "
-               "nach PpUGV § 2 nicht auf die Besetzung angerechnet werden.")
+               "Abwesenheiten gekuerzt. Krankheitsbedingt ausgefallene Dienste "
+               "werden mit ihrer Dauer laut Ausgangsplan gutgeschrieben und "
+               "zaehlen wie gearbeitete Zeit (Entgeltausfallprinzip, § 4 Abs. 1 "
+               "EFZG) - niemand muss Krankheit nacharbeiten. Auszubildende sind "
+               "nicht enthalten, da sie nach PpUGV § 2 nicht auf die Besetzung "
+               "angerechnet werden.")
     st.markdown(f"Pflegehilfskraft-Anteil an den Diensten: "
                 f"**{kpi['hilfskraftanteil']:.1%}** "
                 f"(Grenze nach PpUGV: {kpi['hilfskraft_grenze']:.0%})")

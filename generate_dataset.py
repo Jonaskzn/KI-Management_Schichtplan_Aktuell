@@ -51,17 +51,80 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 COMBINED_FILE = os.path.join(BASE, "schichtplan_datensatz.csv")
 OUT = os.path.join(BASE, "data")   # nur bei --normalized
 
-WARD = {
-    "ward_id": "ST-IK1",
-    "name": "Normalstation Innere Medizin / Kardiologie",
-    "ppug_bereich": "Innere Medizin und Kardiologie",          # [PpUGV] Anlage
-    "beds": 30,                                                 # [ANNAHME]
-    "ratio_day": 10.0,                                          # [PpUGV] 10:1 Tagschicht
-    "ratio_night": 22.0,                                        # [PpUGV] 22:1 Nachtschicht
-    "max_helper_share_day": 0.10,                               # [PpUGV] max. 10 %
-    "max_helper_share_night": 0.10,                             # [PpUGV] max. 10 %
-    "bundesland": "Hamburg",                                    # [ANNAHME]
+# Stationstypen. Die Verhaeltniszahlen und Hilfskraftquoten stammen aus der
+# Anlage zur PpUGV und sind damit belegt, nicht gesetzt. Bettenzahl,
+# Hilfskraftbesetzung und Stationsname sind [ANNAHME] - sie bilden eine
+# plausible Station des jeweiligen Typs ab.
+#
+# Der Sinn mehrerer Stationstypen: Die Evaluationskampagne variiert bisher nur
+# die *Realisierung* (Seed, Personaldecke) innerhalb eines Stationstyps. Erst
+# ein anderer Typ prueft, ob die Befunde auch bei anderer Verhaeltniszahl,
+# anderer Stationsgroesse und anderem Qualifikationsmix tragen. Das Schema des
+# Datensatzes bleibt dabei unveraendert - und `planner.py` ebenfalls. Genau das
+# ist die Probe auf das Konstruktionsprinzip "Regeln in die Daten, nicht in den
+# Code".
+WARD_TYPEN = {
+    "innere": {
+        "ward_id": "ST-IK1",
+        "name": "Normalstation Innere Medizin / Kardiologie",
+        "ppug_bereich": "Innere Medizin und Kardiologie",       # [PpUGV] Anlage
+        "beds": 30,                                             # [ANNAHME]
+        "ratio_day": 10.0,                                      # [PpUGV] 10:1
+        "ratio_night": 22.0,                                    # [PpUGV] 22:1
+        "max_helper_share_day": 0.10,                           # [PpUGV] max. 10 %
+        "max_helper_share_night": 0.10,                         # [PpUGV] max. 10 %
+        "hilfskraefte": [0.75, 0.50],                           # [ANNAHME]
+        "s2_episoden": 7,                               # [ANNAHME] kalibriert, s. kalibriere_episoden()
+        "bundesland": "Hamburg",                                # [ANNAHME]
+    },
+    "geriatrie": {
+        "ward_id": "ST-GER1",
+        "name": "Normalstation Geriatrie",
+        "ppug_bereich": "Geriatrie",                            # [PpUGV] Anlage
+        "beds": 40,                                             # [ANNAHME]
+        "ratio_day": 10.0,                                      # [PpUGV] 10:1
+        "ratio_night": 20.0,                                    # [PpUGV] 20:1
+        "max_helper_share_day": 0.15,                           # [PpUGV] max. 15 %
+        "max_helper_share_night": 0.20,                         # [PpUGV] max. 20 %
+        "hilfskraefte": [0.75, 0.75, 0.50],                     # [ANNAHME]
+        "s2_episoden": 8,                               # [ANNAHME] kalibriert, s. kalibriere_episoden()
+        "bundesland": "Hamburg",                                # [ANNAHME]
+    },
+    "herzchirurgie": {
+        "ward_id": "ST-HCH1",
+        "name": "Normalstation Herzchirurgie",
+        "ppug_bereich": "Herzchirurgie",                        # [PpUGV] Anlage
+        "beds": 24,                                             # [ANNAHME]
+        "ratio_day": 7.0,                                       # [PpUGV] 7:1
+        "ratio_night": 15.0,                                    # [PpUGV] 15:1
+        "max_helper_share_day": 0.05,                           # [PpUGV] max. 5 %
+        "max_helper_share_night": 0.00,                         # [PpUGV] keine
+        # Keine Pflegehilfskraft: Die PpUGV laesst hier hoechstens 5 % zu, was
+        # bei Schichtteams von drei bis fuenf Personen ganzzahlig null ergibt.
+        # Eine dennoch eingestellte Hilfskraft waere in keiner Schicht
+        # einsetzbar - eine Person mit 0 % Auslastung, die jede Kennzahl zur
+        # Lastverteilung verzerrt, ohne dass ein Planungsverfahren etwas
+        # dagegen tun koennte. [ANNAHME]
+        "hilfskraefte": [],
+        "s2_episoden": 6,                               # [ANNAHME] kalibriert, s. kalibriere_episoden()
+        "bundesland": "Hamburg",                                # [ANNAHME]
+    },
+    "intensiv": {
+        "ward_id": "ST-ITS1",
+        "name": "Intensivstation",
+        "ppug_bereich": "Intensivmedizin",                      # [PpUGV] Anlage
+        "beds": 12,                                             # [ANNAHME]
+        "ratio_day": 2.0,                                       # [PpUGV] 2:1
+        "ratio_night": 3.0,                                     # [PpUGV] 3:1
+        "max_helper_share_day": 0.05,                           # [PpUGV] max. 5 %
+        "max_helper_share_night": 0.05,                         # [PpUGV] max. 5 %
+        "hilfskraefte": [],                                     # [ANNAHME] reine Fachkraftbesetzung
+        "s2_episoden": 10,                              # [ANNAHME] kalibriert, s. kalibriere_episoden()
+        "bundesland": "Hamburg",                                # [ANNAHME]
+    },
 }
+
+WARD = WARD_TYPEN["innere"]
 
 # Planungshorizont: 4 volle Wochen, Start Montag; Historie: 4 Wochen davor.
 PLAN_START = date(2026, 11, 30)
@@ -124,7 +187,10 @@ MAX_NIGHTS_PER_4W = 8          # [ANNAHME]
 # S1 und S2 sind auf denselben Umfang kalibriert und unterscheiden sich nur
 # in der Struktur - siehe build_scenarios().
 SCEN_S1_RATE = 0.040           # [ANNAHME] abgeleitet aus [TK]
-SCEN_S2_EPISODES = 7           # [ANNAHME] kalibriert auf das Ausfallvolumen von S1
+# Die Zahl der S2-Episoden ist bewusst KEINE Konstante. Sie wird in
+# build_scenarios() aus dem tatsaechlich gezogenen Ausfallvolumen von S1
+# derselben Instanz berechnet, damit die Volumenparitaet unabhaengig von
+# Stationsgroesse und Seed erhalten bleibt.
 SCEN_S2_DUR_MIN = 2            # [ANNAHME] Dauer einer Krankheitsepisode
 SCEN_S2_DUR_MAX = 4            # [ANNAHME]
 SCEN_S2_WINDOW_SHARE = 0.80    # [ANNAHME] Anteil der Episoden im Wellenfenster
@@ -241,14 +307,19 @@ def occ_factor(d: date) -> float:
 def build_occupancy():
     rows = []
     for d in all_days():
+        # Untergrenzen der Belegung relativ zur Bettenzahl, damit die
+        # Verteilung bei kleineren Stationen nicht abgeschnitten wird
+        # [ANNAHME]. Bei 30 Betten ergibt das die urspruenglichen Werte 10/8.
+        floor12 = max(2, int(round(WARD["beds"] * 0.33)))
+        floor00 = max(2, floor12 - 2)
         mean = WARD["beds"] * BASE_OCCUPANCY * occ_factor(d)
-        census12 = int(np.clip(round(rng.normal(mean, mean * OCC_NOISE_SD)), 10, WARD["beds"]))
+        census12 = int(np.clip(round(rng.normal(mean, mean * OCC_NOISE_SD)), floor12, WARD["beds"]))
         # Aufnahmen aus Verweildauer: census / LOS, elektiv Mo-Do etwas hoeher
         adm_mean = census12 / AVG_LOS_DAYS * (1.15 if d.weekday() <= 3 else 0.70)
         admissions = int(np.clip(rng.poisson(adm_mean), 0, 8))
         discharges = int(np.clip(rng.poisson(adm_mean * 0.95), 0, 8))
         # Mitternachtsbestand: nach Abendentlassungen leicht niedriger
-        census00 = int(np.clip(census12 - rng.integers(0, 3), 8, WARD["beds"]))
+        census00 = int(np.clip(census12 - rng.integers(0, 3), floor00, WARD["beds"]))
         isolation = int(rng.binomial(census12, ISOLATION_RATE))
 
         # Pflegeaufwand je Patient (A+S) aus rechtsschiefer Verteilung, begrenzt
@@ -292,13 +363,20 @@ def build_demand(occ_rows):
             soll = max(ppug_min, int(round(ppr_based)))
             if sid == "N":
                 soll = max(soll, 2)          # [ANNAHME] Zwei-Personen-Nachtdienst
-            elif census >= 15:
+            elif census >= WARD["beds"] / 2:
                 soll = max(soll, 3)          # [ANNAHME] Pausenabloesung nach ArbZG § 4
 
-            if sid == "N":
-                max_helper = 0               # 1 von 2 = 50 % > 10 % [PpUGV]
-            else:
-                max_helper = 1 if soll >= 3 else 0
+            # Hilfskraftgrenze je Schicht. Die PpUGV begrenzt den Anteil der
+            # Pflegehilfskraefte; bei kleinen Schichtteams laesst sich das nur
+            # ganzzahlig abbilden. Ableitung: Anteil mal Sollbesetzung,
+            # abgerundet - und mindestens eine Hilfskraft im Tagdienst, sobald
+            # das Team mindestens drei Personen umfasst und der Bereich
+            # ueberhaupt zehn Prozent zulaesst [ANNAHME].
+            share = (WARD["max_helper_share_night"] if sid == "N"
+                     else WARD["max_helper_share_day"])
+            max_helper = min(max(soll - 1, 0), int(soll * share))
+            if sid != "N" and soll >= 3 and share >= 0.10:
+                max_helper = max(max_helper, 1)
 
             rows.append({
                 "date": o["date"],
@@ -364,8 +442,10 @@ def build_staff(demand_rows, staffing_factor: float = 1.0):
                           skills=["EXAM", "LEITUNG", "PRAXISANLEITUNG"]))
     fte = 1.0 - LEITUNG_FREISTELLUNG
 
-    # 2 Pflegehilfskraefte in Teilzeit: haelt den Hilfskraftanteil unter 10 %
-    for i, pct in enumerate([0.75, 0.50], start=1):
+    # Pflegehilfskraefte in Teilzeit. Zahl und Umfang haengen am Stationstyp:
+    # Die PpUGV laesst je Bereich unterschiedliche Hilfskraftanteile zu, in der
+    # Herzchirurgie und auf der Intensivstation nahezu keine.
+    for i, pct in enumerate(WARD["hilfskraefte"], start=1):
         staff.append(Employee(f"PH-{i:03d}", "Pflegehilfskraft", "Pflegehilfskraft",
                               pct, 0, 1, "Pflegehilfskraft", skills=["PFLEGEHILFE"]))
         fte += pct
@@ -609,29 +689,6 @@ def build_scenarios(staff, demand_rows, unavailable):
     Tagesrate, im Fenster verdreifacht) erzeugte verstreute Einzeltage und
     zugleich rund 60 % mehr Ausfaelle als S1 - beides unerwuenscht.
     """
-    scen_meta = [
-        {"scenario_id": "S0", "name": "Referenz ohne kurzfristige Ausfaelle",
-         "description": "Basisplan; nur geplante Abwesenheiten.",
-         "struktur": "keine", "erwartete_ausfalltage": 0,
-         "source": "Referenzszenario fuer die Baseline-Messung"},
-        {"scenario_id": "S1", "name": "Regelbetrieb mit verteilten Ausfaellen",
-         "description": "Unabhaengige Einzeltage ueber den gesamten Horizont.",
-         "struktur": "unabhaengig",
-         "erwartete_ausfalltage": round(SCEN_S1_RATE * PLAN_DAYS * 100) / 100,
-         "source": "Rate abgeleitet aus TK-Gesundheitsreport (28 AU-Tage/Jahr), "
-                   "Langzeitanteil herausgerechnet [ANNAHME]"},
-        {"scenario_id": "S2", "name": "Ausfallwelle",
-         "description": f"{SCEN_S2_EPISODES} Krankheitsepisoden von "
-                        f"{SCEN_S2_DUR_MIN}-{SCEN_S2_DUR_MAX} Tagen; Beginn zu "
-                        f"{SCEN_S2_WINDOW_SHARE:.0%} im Fenster "
-                        f"{SCEN_S2_CLUSTER_START:%d.%m.} + "
-                        f"{SCEN_S2_CLUSTER_LEN} Tage.",
-         "struktur": "korreliert (Episoden)",
-         "erwartete_ausfalltage": SCEN_S2_EPISODES
-                                  * (SCEN_S2_DUR_MIN + SCEN_S2_DUR_MAX) / 2,
-         "source": "Episodenlaenge und Clusterung [ANNAHME]"},
-    ]
-
     plan_days = [PLAN_START + timedelta(days=k) for k in range(PLAN_DAYS)]
     ids = [e.employee_id for e in staff]
     events = []
@@ -651,9 +708,32 @@ def build_scenarios(staff, demand_rows, unavailable):
             if rng.random() < SCEN_S1_RATE:
                 add("S1", eid, d, rng.choice([2, 4, 8, 12, 12, 24]))
 
+    # --- Kalibrierung des Umfangs von S2 ----------------------------------
+    # Die Zahl der Episoden ist nicht fest gesetzt, sondern wird aus dem
+    # TATSAECHLICH gezogenen Ausfallvolumen von S1 derselben Instanz
+    # abgeleitet: Episodenzahl = aufgerundet(S1-Ausfalltage / mittlere
+    # Episodendauer). Damit bleibt die Volumenparitaet zwischen S1 und S2
+    # auch dann erhalten, wenn eine Instanz mehr Personal hat (groessere
+    # Station) oder der Seed zufaellig viele Einzelausfaelle zieht. Eine
+    # fest gesetzte Episodenzahl war nur fuer eine Stationsgroesse richtig
+    # und haette bei jeder anderen den Vergleich konfundiert.
+    # Die Berechnung verbraucht keine Zufallszahlen; der Zufallsstrom bleibt
+    # gegenueber der fest gesetzten Variante unveraendert.
+    s1_ausfalltage = len(events)
+    mittlere_dauer = (SCEN_S2_DUR_MIN + SCEN_S2_DUR_MAX) / 2
+
     # --- S2: mehrtaegige Episoden, Beginn ueberwiegend im Fenster ---------
+    # Die Episodenzahl ist je Stationstyp kalibriert (WARD["s2_episoden"]) und
+    # innerhalb eines Typs ueber alle Seeds und Personaldecken konstant. Sie
+    # ist keine feste Zahl fuer alle Stationen: Das Ausfallvolumen von S1
+    # waechst mit der Belegschaft, und eine fuer 23 Koepfe kalibrierte Zahl
+    # wuerde auf einer Station mit 31 Koepfen deutlich zu wenig Ausfalltage
+    # erzeugen - womit der Vergleich S1 gegen S2 dort konfundiert waere.
+    # Die Kalibrierung selbst steht in kalibriere_episoden() und wird gegen
+    # das tatsaechlich gezogene S1-Volumen derselben Instanzen gemessen.
     belegt: set[tuple[str, str]] = set()
-    for _ in range(SCEN_S2_EPISODES):
+    n_episoden = WARD["s2_episoden"]
+    for _ in range(n_episoden):
         eid = str(rng.choice(ids))
         dauer = int(rng.integers(SCEN_S2_DUR_MIN, SCEN_S2_DUR_MAX + 1))
         if rng.random() < SCEN_S2_WINDOW_SHARE:
@@ -672,6 +752,29 @@ def build_scenarios(staff, demand_rows, unavailable):
                 continue
             belegt.add((eid, d.isoformat()))
             add("S2", eid, d, notice_erst if k == 0 else 24)
+
+    scen_meta = [
+        {"scenario_id": "S0", "name": "Referenz ohne kurzfristige Ausfaelle",
+         "description": "Basisplan; nur geplante Abwesenheiten.",
+         "struktur": "keine", "erwartete_ausfalltage": 0,
+         "source": "Referenzszenario fuer die Baseline-Messung"},
+        {"scenario_id": "S1", "name": "Regelbetrieb mit verteilten Ausfaellen",
+         "description": "Unabhaengige Einzeltage ueber den gesamten Horizont.",
+         "struktur": "unabhaengig",
+         "erwartete_ausfalltage": s1_ausfalltage,
+         "source": "Rate abgeleitet aus TK-Gesundheitsreport (28 AU-Tage/Jahr), "
+                   "Langzeitanteil herausgerechnet [ANNAHME]"},
+        {"scenario_id": "S2", "name": "Ausfallwelle",
+         "description": f"{n_episoden} Krankheitsepisoden von "
+                        f"{SCEN_S2_DUR_MIN}-{SCEN_S2_DUR_MAX} Tagen; Beginn zu "
+                        f"{SCEN_S2_WINDOW_SHARE:.0%} im Fenster "
+                        f"{SCEN_S2_CLUSTER_START:%d.%m.} + "
+                        f"{SCEN_S2_CLUSTER_LEN} Tage.",
+         "struktur": "korreliert (Episoden)",
+         "erwartete_ausfalltage": n_episoden * mittlere_dauer,
+         "source": "Episodenlaenge und Clusterung [ANNAHME]; Episodenzahl aus "
+                   "dem Ausfallvolumen von S1 kalibriert"},
+    ]
 
     events.sort(key=lambda r: (r["scenario_id"], r["date"], r["employee_id"]))
     return scen_meta, events
@@ -805,6 +908,13 @@ def build_combined(calendar, shift_types, st_rows, staff, occupancy, demand,
         "ppug_ratio_night": WARD["ratio_night"],
     }
 
+    # CONST_RULES ist ein Modulkonstrukt und wird beim Import ausgewertet -
+    # der Hilfskraftanteil haengt aber am Stationstyp. Er wird deshalb hier
+    # ueberschrieben. Die Schluesselreihenfolge bleibt dabei erhalten, damit
+    # die Spaltenreihenfolge der CSV unveraendert ist.
+    rules_const = {**CONST_RULES,
+                   "rule_max_helper_share": WARD["max_helper_share_day"]}
+
     rows = []
     for c in calendar:
         d = c["date"]
@@ -885,7 +995,7 @@ def build_combined(calendar, shift_types, st_rows, staff, occupancy, demand,
                 row[f"azubi_slots_{sid}"] = r["azubi_slots"]
             row.update(ward_const)
             row.update(shift_const)
-            row.update(CONST_RULES)
+            row.update(rules_const)
             row["dataset_version"] = DATASET_VERSION
             row["seed"] = seed
             rows.append(row)
@@ -909,9 +1019,21 @@ def write_csv(name, rows, fieldnames=None):
     return path, len(rows)
 
 
-def build_dataset(seed: int = SEED, staffing_factor: float = 1.0):
-    """Erzeugt eine vollstaendige Instanz im Speicher (fuer Evaluationslaeufe)."""
-    global rng
+def build_dataset(seed: int = SEED, staffing_factor: float = 1.0,
+                  ward: str = "innere"):
+    """
+    Erzeugt eine vollstaendige Instanz im Speicher (fuer Evaluationslaeufe).
+
+    `ward` waehlt den Stationstyp aus WARD_TYPEN. Das Schema des Datensatzes
+    bleibt dabei unveraendert - nur die Werte in den Bedarfs-, Regel- und
+    Stationsspalten aendern sich. `planner.py` muss dafuer nicht angefasst
+    werden, weil dort keine Grenzwerte fest verdrahtet sind.
+    """
+    global rng, WARD
+    if ward not in WARD_TYPEN:
+        raise ValueError(f"unbekannter Stationstyp: {ward} "
+                         f"(bekannt: {', '.join(WARD_TYPEN)})")
+    WARD = WARD_TYPEN[ward]
     rng = np.random.default_rng(seed)
     calendar = build_calendar()
     shift_types = build_shift_types()
@@ -928,6 +1050,7 @@ def build_dataset(seed: int = SEED, staffing_factor: float = 1.0):
                               demand, availability, requests, history,
                               absence_events, hist_off, seed=seed)
     meta = {"seed": seed, "staffing_factor": staffing_factor,
+            "ward": ward, "ward_name": WARD["name"], "beds": WARD["beds"],
             "headcount": len(staff),
             "fte": round(sum(e.employment_pct for e in staff), 2),
             "fte_netto_bedarf": round(netto, 2),
@@ -937,9 +1060,55 @@ def build_dataset(seed: int = SEED, staffing_factor: float = 1.0):
     return combined, meta
 
 
-def write_instance(path: str, seed: int = SEED, staffing_factor: float = 1.0):
+def kalibriere_episoden(ward: str, seeds, faktoren=(1.00, 0.90, 0.80),
+                        kandidaten=range(4, 20)) -> dict:
+    """
+    Bestimmt die Episodenzahl eines Stationstyps.
+
+    Kriterium: S1 und S2 sollen im MITTEL ueber die Kampagneninstanzen
+    dieselbe Zahl an Ausfalltagen tragen (siehe DATENKONZEPT.md, 5.1). Die
+    Zahl ist deshalb nicht frei gewaehlt, sondern das Minimum der mittleren
+    absoluten Abweichung zwischen realisierten S1- und S2-Ausfalltagen.
+
+    Warum ueberhaupt je Stationstyp: Das Ausfallvolumen von S1 entsteht aus
+    Rate mal Personentagen und waechst damit mit der Belegschaft. Eine fuer
+    23 Koepfe kalibrierte Zahl erzeugt auf einer Station mit 31 Koepfen
+    deutlich zu wenig Ausfalltage - der Vergleich S1 gegen S2 waere dort
+    konfundiert. Innerhalb eines Stationstyps bleibt die Zahl dagegen ueber
+    alle Seeds und Personaldecken konstant, damit nicht jede Instanz nach
+    ihrem eigenen Massstab kalibriert wird.
+
+    Der Aufruf ist reine Diagnostik und aendert nichts am Datensatz:
+
+        python -c "import generate_dataset as G; \
+                   print(G.kalibriere_episoden('intensiv', [20261133, 4711]))"
+    """
+    global rng, WARD
+    original = WARD_TYPEN[ward]["s2_episoden"]
+    ergebnis = {}
+    try:
+        for n in kandidaten:
+            WARD_TYPEN[ward]["s2_episoden"] = n
+            abw = []
+            for f in faktoren:
+                for s in seeds:
+                    comb, _ = build_dataset(s, f, ward)
+                    s1 = sum(int(r["absence_s1"]) for r in comb)
+                    s2 = sum(int(r["absence_s2"]) for r in comb)
+                    abw.append(abs(s2 - s1) / max(s1, 1))
+            ergebnis[n] = sum(abw) / len(abw)
+    finally:
+        WARD_TYPEN[ward]["s2_episoden"] = original
+        WARD = WARD_TYPEN["innere"]
+    bester = min(ergebnis, key=ergebnis.get)
+    return {"bester_wert": bester, "mittlere_abweichung": ergebnis[bester],
+            "alle": ergebnis}
+
+
+def write_instance(path: str, seed: int = SEED, staffing_factor: float = 1.0,
+                   ward: str = "innere"):
     """Schreibt eine Instanz als CSV und gibt die Metadaten zurueck."""
-    combined, meta = build_dataset(seed, staffing_factor)
+    combined, meta = build_dataset(seed, staffing_factor, ward)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(combined[0].keys()))
         w.writeheader()

@@ -141,7 +141,8 @@ ax = axes[0]
 methods = ["Greedy", "Greedy reaktiv", "MILP", "MILP reaktiv"]
 names = ["Regelbasiert\nNeuplanung", "Regelbasiert\nreaktiv",
          "MILP\nNeuplanung", "MILP\nreaktiv"]
-vals = [d[d["method"] == mth]["planstabilitaet"].mean() * 100 for mth in methods]
+gestoert = d[d["scenario"].isin(["S1", "S2"])]
+vals = [gestoert[gestoert["method"] == mth]["planstabilitaet"].mean() * 100 for mth in methods]
 bars = ax.bar(range(4), vals, 0.55, color=[BLUE_L, BLUE, ORANGE_L, ORANGE])
 for bar in bars:
     ax.annotate(f"{bar.get_height():.0f} %",
@@ -179,13 +180,17 @@ ax.legend(frameon=False, fontsize=9, loc="upper center", ncol=2,
 
 fig.suptitle("Planstabilität nach kurzfristigen Ausfällen",
              fontsize=15, fontweight="bold", y=1.04)
+_kg = gestoert[gestoert.method == "Greedy auf MILP-Plan"]["planstabilitaet"].mean() * 100
+_km = gestoert[gestoert.method == "MILP reaktiv"]["planstabilitaet"].mean() * 100
 fig.text(0.0, -0.085,
          "Links: Anteil der (Person, Tag)-Zuweisungen, die gegenüber dem eigenen "
-         "Ausgangsplan bestehen bleiben · alle Personaldecken und Szenarien\n"
+         "Ausgangsplan bestehen bleiben · alle Personaldecken, Szenarien S1 und S2\n"
          "Rechts: absolute Zahl geänderter Dienste im End-to-End-Vergleich — jedes "
          "Verfahren erstellt und repariert seinen eigenen Plan.\nLassen beide "
          "Verfahren denselben Plan reparieren, bleibt die Optimierung vorn "
-         "(95,0 % gegen 91,8 % Stabilität auf dem Plan der Optimierung).",
+         f"({_km:.1f} % gegen {_kg:.1f} % Stabilität auf dem Plan der "
+         "Optimierung).".replace(f"{_km:.1f}", f"{_km:.1f}".replace(".", ","))
+         .replace(f"{_kg:.1f}", f"{_kg:.1f}".replace(".", ",")),
          fontsize=9, color=MUTED)
 fig.tight_layout()
 save(fig, "03_planstabilitaet.png")
@@ -279,7 +284,11 @@ x = range(3)
 def _panel(ax, column, fmt, scale=1.0, ylabel=""):
     top = 0
     for k, (label, method, color) in enumerate(SERIES):
-        vals = [d[(d.method == method) & (d.scenario == sc)][column].mean() * scale
+        # In S0 ist die Neuplanung der Ausgangsplan selbst. "MILP reaktiv" in S0
+        # reproduziert ihn exakt; die Zeile "MILP" in S0 ist eine zweite,
+        # unabhaengige Loesung, die bei Zeitlimit abweichen kann.
+        vals = [d[(d.method == ("MILP reaktiv" if (method == "MILP" and sc == "S0")
+                                else method)) & (d.scenario == sc)][column].mean() * scale
                 for sc in SCEN]
         top = max(top, max(vals))
         bars = ax.bar([i + (k - 1) * 0.27 for i in x], vals, 0.25,
@@ -311,11 +320,17 @@ fig.legend(handles, labels, frameon=False, fontsize=10, ncol=3,
            loc="upper center", bbox_to_anchor=(0.5, 1.005))
 fig.suptitle("Der Zielkonflikt: gleichmäßige Last oder stabiler Plan",
              fontsize=15, fontweight="bold", y=1.075)
+_neu = d[(d.method == "MILP") & (d.scenario == "S2")]["auslastung_spanne"].mean() * 100
+_rea = d[(d.method == "MILP reaktiv") & (d.scenario == "S2")]["auslastung_spanne"].mean() * 100
+_gre = d[(d.method == "Greedy reaktiv") & (d.scenario == "S2")]["auslastung_spanne"].mean() * 100
 fig.text(0.0, -0.075,
-         "Unter der Ausfallwelle hält die Optimierung die Spanne bei vollständiger "
-         "Neuplanung auf 16 Prozentpunkten — weniger als die Hälfte der reaktiven\n"
-         "Variante (38). Den Verteilungsvorteil verliert sie also nicht durch die Welle, "
-         "sondern durch die Vorgabe, den Plan möglichst unverändert zu lassen.",
+         f"Unter der Ausfallwelle liegt die Spanne der Optimierung bei vollständiger "
+         f"Neuplanung bei {_neu:.0f} Prozentpunkten, reaktiv bei {_rea:.0f} "
+         f"(Heuristik reaktiv: {_gre:.0f}).\n"
+         "Die Differenz zwischen Neuplanung und reaktiver Variante ist der Preis der "
+         "Vorgabe, den Plan möglichst unverändert zu lassen. Krankheitsbedingt\n"
+         "ausgefallene Dienste sind gutgeschrieben (Entgeltausfallprinzip) und zählen "
+         "nicht als Unterauslastung.",
          fontsize=9, color=MUTED)
 fig.tight_layout()
 save(fig, "05_zielkonflikt.png")

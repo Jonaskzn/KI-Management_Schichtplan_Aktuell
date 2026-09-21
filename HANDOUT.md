@@ -45,7 +45,7 @@ auf dasselbe Ausfallvolumen kalibriert und unterscheiden sich nur in der Struktu
 verteilte Einzeltage gegen mehrtägige Episoden in einer Welle —, damit ein Unterschied der
 Struktur zuzurechnen ist und nicht dem Umfang.
 
-## Die acht wichtigsten Learnings
+## Die neun wichtigsten Learnings
 
 **1. Machine Learning war nicht die Antwort — und das war das erste Ergebnis.**
 Es gibt keine zu lernende Zielvariable und keine historischen Planentscheidungen als
@@ -66,13 +66,13 @@ regelkonform, gegenüber **100 %** der optimierten. Wer nur eine bequeme Instanz
 misst nichts.
 
 **3. Die Zielfunktion entscheidet, nicht das Verfahren.**
-Nach einem Ausfall neu zu optimieren erhielt nur 51 % der Dienste — schlechter als die
-simple Heuristik. Erst als „möglichst wenig ändern" ausdrücklich ins Modell kam, stieg die
-Stabilität auf 95 %. Der Preis dafür ist sichtbar: Unter der Ausfallwelle liegt die
-Lastverteilung dann gleichauf mit der Heuristik (Spanne 0,377 gegen 0,379), während
-vollständige Neuplanung 0,163 erreicht. Gewicht 200 für „nicht ändern" gegen 0,02 für
-Lastausgleich — gleichmäßige Last **oder** stabiler Plan, unter Druck ist beides zugleich
-nicht zu haben. Welches Ziel gewinnt, ist eine Führungsentscheidung, keine technische.
+Nach einem Ausfall neu zu optimieren erhielt nur rund ein Viertel der Dienste — schlechter
+als die simple Heuristik. Erst als „möglichst wenig ändern" ausdrücklich ins Modell kam,
+stieg die Stabilität auf 92 %. Der Preis dafür ist sichtbar: Unter der Ausfallwelle steigt
+die Spanne der Auslastung von 0,187 bei vollständiger Neuplanung auf 0,257 — die
+Optimierung bleibt damit vor der Heuristik (0,317), verteilt aber schlechter, als sie
+könnte. Gewicht 200 für „nicht ändern" gegen 0,02 für Lastausgleich — welches Ziel gewinnt,
+ist eine Führungsentscheidung, keine technische.
 
 **4. Regeln gehören in die Daten, nicht in den Code.**
 Ruhezeiten, Verhältniszahlen und Qualifikationsvorgaben stehen als Spalten im Datensatz.
@@ -84,8 +84,8 @@ Abweichungen: Überschreitungen von Richtwerten, die dem Belastungsschutz dienen
 Rechtsverstöße sind. 95 % davon betreffen Wochenenden. Über 608 Personenpläne gemessen sind
 bei der Heuristik **41 % der Belegschaft an allen vier Wochenenden im Dienst** und 75 % über
 dem Richtwert von zwei; bei der Optimierung liegen 88 % genau auf dem Richtwert. Kein
-Machbarkeitsproblem — dieselben Daten, dieselbe Besetzungsquote, null Rechtsverstöße auf
-beiden Seiten.
+Machbarkeitsproblem und keine Folge der Knappheit — schon bei bedarfsgerechter Decke, wo
+beide Verfahren nahezu gleich besetzen, sind es 43 % gegen niemanden.
 
 **6. Die Prüfung muss vom Verfahren getrennt sein.**
 Eine eigene Funktion bewertet den fertigen Plan unabhängig davon, wer ihn erzeugt hat.
@@ -94,8 +94,8 @@ tatsächlich zwei Fehler in der eigenen Logik gezeigt.
 
 **7. Der Vorteil steckt in der Kette, nicht in einem Schritt.**
 Wir haben alle vier Kombinationen aus Ausgangsplan und Reparaturverfahren gerechnet
-(geänderte Dienste je Monat): Excel-Plan von Excel repariert **19,7** · Excel-Plan von MILP
-**25,8** · MILP-Plan von Excel **24,8** · MILP-Plan von MILP **14,9**. Auf jedem geerbten
+(geänderte Dienste je gestörtem Plan): Excel-Plan von Excel repariert **30,3** · Excel-Plan
+von MILP **34,8** · MILP-Plan von Excel **36,0** · MILP-Plan von MILP **22,8**. Auf jedem geerbten
 Plan ändert die Optimierung *mehr* — weil sie dessen offene Dienste und Regelverstöße
 mitbehebt. Nur wenn Planung **und** Anpassung aus demselben System kommen, sinkt der Wert.
 Für die Praxis: Ein Optimierer als reine Feuerwehr auf bestehenden Excel-Plänen hebt die
@@ -105,17 +105,20 @@ Rechtssicherheit, aber nicht die Entlastung.
 Planstabilität als Prozentwert hängt davon ab, wie gut der Ausgangsplan war — wer offene
 Dienste und Regelverstöße stehen lässt, gewinnt sie durch Untätigkeit. Wir berichten sie
 deshalb nie allein, sondern mit der absoluten Zahl geänderter Dienste, und haben beide
-Verfahren zusätzlich denselben Plan reparieren lassen (95,0 % gegen 91,8 %). Dieselbe
-Disziplin beim Szenarienvergleich: Die Ausfallwelle sah instabiler aus — betrachtet man nur
-die Instanzen, in denen sie *nicht* mehr Ausfalltage enthielt, schrumpfte der Unterschied
-von 2,5 auf 0,8 Prozentpunkte. Überwiegend ein Mengen-, kein Struktureffekt. Der
-Verteilungseffekt hielt stand (6 von 6) — nur den berichten wir.
+Verfahren zusätzlich denselben Plan reparieren lassen (92,4 % gegen 88,2 %).
+
+**9. Ein plausibles Ergebnis kann einen Modellfehler verdecken.**
+Die Ausfallwelle schien die Lastverteilung strukturell zu verschlechtern — bis wir
+Krankheitstage nach dem Entgeltausfallprinzip (§ 4 EFZG) gutschrieben. Ohne Gutschrift
+galten gerade die mehrtägig Erkrankten als unterausgelastet; mit ihr schrumpfte der Effekt
+von +0,084 auf +0,008. Aufgefallen ist das nicht in den Kennzahlen, sondern in der App: Die
+Priorität „Verteilungsgerechtigkeit" ließ Kranke ihre Dienste nacharbeiten.
 
 ## Herausforderungen und Erfolgsfaktoren
 
 - **Realitätsnähe kollidiert mit Recht.** Der Bundesdurchschnitt an Hilfskräften (17,6 %)
   liegt über der PpUGV-Grenze für unseren Bereich (10 %). Die strengere Norm hat Vorrang.
-- **13 Annahmen** mussten als solche gekennzeichnet werden, weil sie nicht belegbar sind.
+- **14 Annahmen** mussten als solche gekennzeichnet werden, weil sie nicht belegbar sind.
 - **Datensatz zuerst, reproduzierbar und dokumentiert** — fester Seed, Generator- und
   Prüfskript. Ohne das ist keine Aussage belastbar.
 - **Klein bleiben.** Eine Station, ein Monat, nur der Pflegedienst.
@@ -126,14 +129,14 @@ Verteilungseffekt hielt stand (6 von 6) — nur den berichten wir.
 ## Werkzeuge
 
 Python mit pandas · **SciPy/HiGHS** für die Optimierung (kein kommerzieller Solver nötig)
-· Streamlit · GitHub und Streamlit Community Cloud. Rechenzeit: 10–16 Sekunden für einen
-28-Tage-Plan, im Median unter einer Viertelsekunde für eine Umplanung.
+· Streamlit · GitHub und Streamlit Community Cloud. Rechenzeit: 8–15 Sekunden für einen
+28-Tage-Plan, im Median rund eine halbe Sekunde für eine Umplanung.
 
 ## Was wir gemessen haben — und was nicht
 
-**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 4,7
-Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 33 auf 7
-Prozentpunkte), Planstabilität nach Ausfällen (95,0 % gegen 93,4 % bei 14,9 statt 19,7
+**Gemessen:** Regelkonformität unter Knappheit (bei 80 % Decke 0 gegen 6,5
+Untergrenzenverstöße je Plan), Gleichverteilung der Arbeitslast (Spanne von 33 auf 5
+Prozentpunkte), Planstabilität nach Ausfällen (92,4 % gegen 89,9 % bei 22,8 statt 30,3
 geänderten Diensten), der Zielkonflikt zwischen Lastverteilung und Stabilität, Rechenzeit.
 
 **Nicht gemessen, nur plausibel:** Reduktion des manuellen Planungsaufwands, Wirkung auf

@@ -33,6 +33,11 @@ import pandas as pd
 
 CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                    "schichtplan_datensatz.csv")
+# Optional: anderer Datensatz als Argument, z. B. eine Replikationsinstanz
+# eines anderen Stationstyps. Die Pruefungen selbst sind datengetrieben und
+# lesen Bettenzahl, Verhaeltniszahlen und Regelwerte aus der Datei.
+if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+    CSV = sys.argv[1]
 
 FAIL, WARN = [], []
 
@@ -169,8 +174,17 @@ for s in SHIFT_IDS:
 check(ok_ratio, "Untergrenze = aufgerundeter Quotient Bestand / Verhaeltniszahl")
 check(ok_floor, "Sollbesetzung erreicht in jeder Schicht die Untergrenze")
 check(ok_sum, "Qualifikationsanforderungen summieren sich zur Sollbesetzung")
-check((days["max_hilfskraft_N"] == 0).all(),
-      "keine Pflegehilfskraft im Nachtdienst (1 von 2 = 50 % > 10 %)")
+# Nachtdienst: Die PpUGV-Anlage erlaubt je nach Bereich unterschiedliche
+# Hilfskraftanteile, hoechstens jedoch 20 % (Geriatrie). Die Pruefung ist
+# deshalb als Anteil formuliert und nicht als "immer null" - so gilt sie auch
+# fuer Replikationsinstanzen anderer Stationstypen.
+nacht_anteil = float((days["max_hilfskraft_N"] / days["required_N"]).max())
+print(f"        Hilfskraftanteil Nachtdienst max.: {nacht_anteil:>9.1%} "
+      f"(PpUGV-Anlage hoechstens 20 %)")
+check(nacht_anteil <= 0.20 + 1e-9,
+      "Hilfskraftanteil im Nachtdienst innerhalb der PpUGV-Hoechstgrenze")
+check(nacht_anteil == 0.0,
+      "keine Pflegehilfskraft im Nachtdienst", hard=False)
 helper_fte = staff.loc[staff["ppug_category"] == "Pflegehilfskraft", "employment_pct"].sum()
 count_fte = staff.loc[countable, "employment_pct"].sum()
 share = helper_fte / count_fte
@@ -180,6 +194,25 @@ check(share <= float(g["rule_max_helper_share"]),
       "Pflegehilfskraft-Anteil der Kapazitaet haelt die Grenze ein")
 check((staff.loc[azubi, "ppug_countable"] == 0).all(),
       "Auszubildende sind nicht auf die Untergrenze anrechenbar (PpUGV § 2)")
+
+# Einsetzbarkeit: Es darf niemanden geben, fuer den ueber den gesamten
+# Horizont keine einzige Schicht offensteht. Eine solche Person haette
+# zwangslaeufig 0 % Auslastung, wuerde jede Kennzahl zur Lastverteilung
+# verzerren - und kein Planungsverfahren koennte etwas dagegen tun. Der Fall
+# entsteht leicht: In Bereichen mit 5 % Hilfskraftgrenze ist die ganzzahlige
+# Obergrenze bei kleinen Schichtteams null.
+hilfsplaetze = int(sum(days[f"max_hilfskraft_{s}"].sum() for s in SHIFT_IDS))
+azubiplaetze = int(sum(days[f"azubi_slots_{s}"].sum() for s in SHIFT_IDS))
+n_hilfs = int((staff["ppug_category"] == "Pflegehilfskraft").sum())
+n_azubi = len(azubi)
+print(f"        Einsatzplaetze Hilfskraefte:       {hilfsplaetze:>9d} "
+      f"fuer {n_hilfs} Personen")
+print(f"        Einsatzplaetze Auszubildende:      {azubiplaetze:>9d} "
+      f"fuer {n_azubi} Personen")
+check(n_hilfs == 0 or hilfsplaetze > 0,
+      "Pflegehilfskraefte sind in mindestens einer Schicht einsetzbar")
+check(n_azubi == 0 or azubiplaetze > 0,
+      "Auszubildende sind in mindestens einer Schicht einsetzbar")
 
 print("\nE) Plausibilitaet gegenueber Referenzkennzahlen")
 ausl = days["census_1200"].mean() / int(g["beds"])

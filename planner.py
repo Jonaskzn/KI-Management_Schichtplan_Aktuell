@@ -164,6 +164,48 @@ def scenario_absences(ctx: Context, scenario: str) -> set[tuple[str, date]]:
     return {(r.employee_id, r.date) for r in rows.itertuples()}
 
 
+def _as_assignments(plan) -> dict[tuple[str, date], str]:
+    if plan is None:
+        return {}
+    return plan.assignments if isinstance(plan, PlanResult) else dict(plan)
+
+
+def krankheitsgutschrift(ctx: Context, scenario: str,
+                         manual_absences: set[tuple[str, date]] | None = None,
+                         basisplan=None) -> dict[str, int]:
+    """
+    Zeitgutschrift fuer krankheitsbedingt ausgefallene Dienste, in Minuten je
+    Person.
+
+    Rechtsgrundlage ist das Entgeltausfallprinzip (§ 4 Abs. 1 EFZG): Wer
+    arbeitsunfaehig ist, wird so gestellt, als haette er gearbeitet. Das BAG
+    hat bestaetigt, dass dafuer eine Zeitgutschrift auf dem Arbeitszeitkonto
+    verlangt werden kann (BAG, 05.10.2023 - 6 AZR 210/22). Nacharbeiten muss
+    niemand.
+
+    Gutgeschrieben wird der Dienst, den die Person laut **Ausgangsplan** an
+    diesem Tag gehabt haette - das ist der Dienstplan, der zum Zeitpunkt der
+    Krankmeldung gilt. Ein Ausfall an einem dienstfreien Tag ergibt keine
+    Gutschrift, weil keine Arbeitsleistung ausgefallen ist.
+
+    Ohne diese Gutschrift hielte das Modell eine kranke Person fuer
+    unterausgelastet: Das MILP liesse sie ihre Dienste an anderen Tagen
+    nacharbeiten, die Heuristik zoege sie als Ersatz vor, und die Kennzahl
+    "Spanne der Auslastung" mass unter S1/S2 teilweise Krankheit statt
+    Planungsqualitaet.
+    """
+    ref = _as_assignments(basisplan)
+    if not ref:
+        return {}
+    krank = scenario_absences(ctx, scenario) | set(manual_absences or set())
+    gutschrift: dict[str, int] = {}
+    for (e, d) in krank:
+        s = ref.get((e, d))
+        if s and (e, d) not in ctx.unavailable:
+            gutschrift[e] = gutschrift.get(e, 0) + int(ctx.shifts[s]["net"])
+    return gutschrift
+
+
 # --------------------------------------------------------------------------
 # Ergebnisobjekt
 # --------------------------------------------------------------------------
@@ -202,7 +244,8 @@ class PlanResult:
 def plan_greedy(ctx: Context, scenario: str,
                 manual_absences: set[tuple[str, date]] | None = None,
                 fixed: dict[tuple[str, date], str] | None = None,
-                soft_night: bool = True) -> PlanResult:
+                soft_night: bool = True,
+                basisplan=None) -> PlanResult:
     """
     Regelbasierte Referenzplanung. Entspricht dem Vorgehen einer manuellen
     Excel-Planung: Tag fuer Tag, Schicht fuer Schicht, jeweils die Person mit
@@ -211,11 +254,17 @@ def plan_greedy(ctx: Context, scenario: str,
     `fixed` haelt bereits getroffene Zuweisungen fest und ist die Grundlage der
     reaktiven Umplanung (Schritt 3): nur die von einem Ausfall betroffenen
     Slots werden neu besetzt, der Rest des Plans bleibt stehen.
+
+    `basisplan` ist der Dienstplan, der bei der Krankmeldung gilt; aus ihm
+    wird die Krankheitsgutschrift berechnet. Ohne Angabe gilt `fixed` als
+    Basisplan.
     """
     t0 = time.perf_counter()
     manual = set(manual_absences or set())
     fixed = dict(fixed or {})
     blocked = ctx.unavailable | scenario_absences(ctx, scenario) | manual
+    gutschrift = krankheitsgutschrift(ctx, scenario, manual,
+                                      basisplan if basisplan is not None else fixed)
 
     min_rest = float(ctx.rules.get("rule_min_rest_h", 11))
     st = ctx.staff
@@ -223,7 +272,21 @@ def plan_greedy(ctx: Context, scenario: str,
 
     last_end: dict[str, datetime] = {}
     consec: dict[str, int] = {e: 0 for e in st.index}
+    # Gutgeschriebene Krankheitszeit zaehlt wie gearbeitete Zeit. Die Heuristik
+    # arbeitet Tag fuer Tag; die Gutschrift wird deshalb an dem Tag verbucht,
+    # an dem der Ausfall liegt - so wie sie auch auf dem Arbeitszeitkonto
+    # auflaeuft. Fuer die Obergrenze wird die noch ausstehende Gutschrift
+    # vorab reserviert, damit am Monatsende Ist plus Gutschrift die
+    # Vertragsgrenze nicht uebersteigt.
     worked: dict[str, int] = {e: 0 for e in st.index}
+    gut_offen: dict[str, int] = {e: gutschrift.get(e, 0) for e in st.index}
+    basis = _as_assignments(basisplan if basisplan is not None else fixed)
+    krank_tage = scenario_absences(ctx, scenario) | manual
+    gut_je_tag: dict[date, list[tuple[str, int]]] = {}
+    for (e, d) in krank_tage:
+        s_b = basis.get((e, d))
+        if s_b and (e, d) not in ctx.unavailable:
+            gut_je_tag.setdefault(d, []).append((e, int(ctx.shifts[s_b]["net"])))
     nights: dict[str, int] = {e: 0 for e in st.index}
     weekends: dict[str, set] = {e: set() for e in st.index}
 
@@ -260,7 +323,8 @@ def plan_greedy(ctx: Context, scenario: str,
         # modelliert - der Verfahrensvergleich waere dann nicht fair.
         if s == "N" and not relax_night and nights[e] >= int(row["max_night_shifts"]):
             return False
-        if worked[e] + ctx.shifts[s]["net"] > int(row["max_total_minutes"]):
+        if (worked[e] + gut_offen[e] + ctx.shifts[s]["net"]
+                > int(row["max_total_minutes"])):
             return False
         if e in last_end:
             gap = (shift_start(ctx, d, s) - last_end[e]).total_seconds() / 3600
@@ -285,6 +349,11 @@ def plan_greedy(ctx: Context, scenario: str,
             weekends[e].add(d.isocalendar()[1])
 
     for d in ctx.plan_dates:
+        # Krankheitsgutschrift des Tages verbuchen
+        for e, minuten in gut_je_tag.get(d, []):
+            worked[e] += minuten
+            gut_offen[e] -= minuten
+
         # Fixierte Zuweisungen zuerst uebernehmen - aber nur, wenn sie im
         # aktuellen Zustand regelkonform sind. Ungeprueftes Uebernehmen war ein
         # Fehler: faellt jemand aus und wird die Luecke neu besetzt, kann die
@@ -369,7 +438,8 @@ def plan_greedy(ctx: Context, scenario: str,
 
     return PlanResult(method="Greedy-Heuristik (Baseline)", scenario=scenario,
                       assignments=assignments, open_slots=open_slots,
-                      runtime_s=time.perf_counter() - t0)
+                      runtime_s=time.perf_counter() - t0,
+                      info={"gutschrift_min": gutschrift})
 
 
 # --------------------------------------------------------------------------
@@ -409,7 +479,8 @@ def plan_milp(ctx: Context, scenario: str,
               fixed: dict[tuple[str, date], str] | None = None,
               reference: "PlanResult | None" = None,
               time_limit_s: float = 60.0, mip_gap: float = 0.01,
-              weights: dict | None = None) -> PlanResult:
+              weights: dict | None = None,
+              basisplan=None) -> PlanResult:
     """
     Optimierungsbasierte Planung ueber den gesamten Horizont.
 
@@ -417,6 +488,10 @@ def plan_milp(ctx: Context, scenario: str,
     werden belohnt, sodass der Optimierer den bestehenden Plan nur dort
     aufbricht, wo es sich lohnt (Planstabilitaet als Zielgroesse statt als
     Zufallsprodukt). `fixed` haelt Zuweisungen zusaetzlich hart fest.
+
+    `basisplan` ist der Dienstplan, der bei der Krankmeldung gilt; aus ihm
+    wird die Krankheitsgutschrift berechnet. Ohne Angabe gilt `reference`
+    als Basisplan.
     """
     import numpy as np
     import scipy.sparse as sp
@@ -426,6 +501,8 @@ def plan_milp(ctx: Context, scenario: str,
     W = {**WEIGHTS, **(weights or {})}
     manual = set(manual_absences or set())
     blocked = ctx.unavailable | scenario_absences(ctx, scenario) | manual
+    gutschrift = krankheitsgutschrift(ctx, scenario, manual,
+                                      basisplan if basisplan is not None else reference)
     st, days, dates = ctx.staff, ctx.days, ctx.plan_dates
     net = {s: ctx.shifts[s]["net"] for s in SHIFT_IDS}
     cap_eff = effective_capacity(ctx)
@@ -468,10 +545,14 @@ def plan_milp(ctx: Context, scenario: str,
     c = np.zeros(n)
 
     # ---- Zielarbeitszeit je Person (Fairness) ---------------------------
+    # Gutgeschriebene Krankheitszeit zaehlt wie gearbeitete Zeit. Die Summe
+    # aus Ist und Gutschrift ist deshalb Bedarf plus Gutschrift - daraus
+    # ergibt sich die gleichmaessige Auslastung, an der sich jede Person misst.
     demand_min = sum(int(days.loc[d, f"required_{s}"]) * net[s]
                      for d in dates for s in SHIFT_IDS)
     cap_total = sum(cap_eff[e] for e in countable) or 1.0
-    load = demand_min / cap_total
+    credit_total = sum(gutschrift.get(e, 0) for e in countable)
+    load = (demand_min + credit_total) / cap_total
     target = {e: cap_eff[e] * load for e in countable}
 
     # ---- Schranken und Zielkoeffizienten --------------------------------
@@ -609,9 +690,10 @@ def plan_milp(ctx: Context, scenario: str,
                      for kind, d in window if kind == "plan" for s in SHIFT_IDS]
             add_row(terms, -np.inf, float(L - 1 - const))
 
-        # (8) vertragliche Hoechstarbeitszeit im Horizont
+        # (8) vertragliche Hoechstarbeitszeit im Horizont; gutgeschriebene
+        # Krankheitszeit zaehlt mit (Arbeitszeitkonto, nicht ArbZG)
         add_row([(idx[("x", e, d, s)], float(net[s])) for d in dates for s in SHIFT_IDS],
-                -np.inf, float(row["max_total_minutes"]))
+                -np.inf, float(row["max_total_minutes"]) - gutschrift.get(e, 0))
 
         # (9) Nachtdienste (weicher Richtwert)
         add_row([(idx[("x", e, d, "N")], 1.0) for d in dates]
@@ -630,8 +712,9 @@ def plan_milp(ctx: Context, scenario: str,
         # (11) Fairness: Betrag der Abweichung von der Zielarbeitszeit
         if e in countable:
             work = [(idx[("x", e, d, s)], float(net[s])) for d in dates for s in SHIFT_IDS]
-            add_row(work + [(idx[("dev", e)], -1.0)], -np.inf, target[e])
-            add_row(work + [(idx[("dev", e)], 1.0)], target[e], np.inf)
+            ziel = target[e] - gutschrift.get(e, 0)
+            add_row(work + [(idx[("dev", e)], -1.0)], -np.inf, ziel)
+            add_row(work + [(idx[("dev", e)], 1.0)], ziel, np.inf)
 
     A = sp.coo_array((vals, (rows, cols)), shape=(r, n)).tocsr()
     res = milp(c=c, constraints=[LinearConstraint(A, np.array(rlb), np.array(rub))],
@@ -643,6 +726,7 @@ def plan_milp(ctx: Context, scenario: str,
     open_slots: list[dict] = []
     info = {"status": int(res.status), "message": str(res.message),
             "variablen": n, "nebenbedingungen": r,
+            "gutschrift_min": gutschrift,
             "zielfunktionswert": float(res.fun) if res.x is not None else None,
             "mip_gap": float(getattr(res, "mip_gap", float("nan")))}
     if res.x is not None:
@@ -668,10 +752,19 @@ def plan_milp(ctx: Context, scenario: str,
 # Unabhaengige Bewertung
 # --------------------------------------------------------------------------
 
-def evaluate(ctx: Context, result: PlanResult) -> dict:
-    """Prueft den fertigen Plan gegen die Regeln aus dem Datensatz."""
+def evaluate(ctx: Context, result: PlanResult, basisplan=None,
+             manual_absences: set[tuple[str, date]] | None = None) -> dict:
+    """
+    Prueft den fertigen Plan gegen die Regeln aus dem Datensatz.
+
+    `basisplan` ist der Dienstplan, der bei den Krankmeldungen galt. Aus ihm
+    berechnet die Pruefung die Krankheitsgutschrift selbst - unabhaengig vom
+    Planer, der sie nicht selbst behaupten darf. Ohne Basisplan (Szenario S0
+    oder reine Erstplanung) gibt es keine Gutschrift.
+    """
     st = ctx.staff
     a = result.assignments
+    gutschrift = krankheitsgutschrift(ctx, result.scenario, manual_absences, basisplan)
     min_rest = float(ctx.rules.get("rule_min_rest_h", 11))
     viol: list[dict] = []
 
@@ -736,11 +829,11 @@ def evaluate(ctx: Context, result: PlanResult) -> dict:
             night_count_v += 1
             add("Nachtarbeit (weich)", f"{e}: {n_nights} Nachtdienste ueber Richtwert",
                 mitarbeiter=e)
-        minutes = sum(ctx.shifts[s]["net"] for _, s in own)
+        minutes = sum(ctx.shifts[s]["net"] for _, s in own) + gutschrift.get(e, 0)
         if minutes > int(st.loc[e, "max_total_minutes"]):
             hours_v += 1
-            add("Arbeitszeit", f"{e}: {minutes / 60:.1f} h ueber Vertragsobergrenze",
-                mitarbeiter=e)
+            add("Arbeitszeit", f"{e}: {minutes / 60:.1f} h ueber Vertragsobergrenze "
+                               f"(inkl. Krankheitsgutschrift)", mitarbeiter=e)
         wk = {d.isocalendar()[1] for d, _ in own if d.weekday() >= 5}
         if len(wk) > int(st.loc[e, "max_weekends"]):
             weekend_v += 1
@@ -759,16 +852,21 @@ def evaluate(ctx: Context, result: PlanResult) -> dict:
                     if total_countable_shifts else 0.0)
 
     # Arbeitszeitabweichung gegen die im Horizont tatsaechlich verfuegbare
-    # Sollzeit (siehe effective_capacity)
+    # Sollzeit (siehe effective_capacity). Gutgeschriebene Krankheitszeit
+    # zaehlt wie gearbeitete Zeit (Entgeltausfallprinzip) - sonst erschiene
+    # eine kranke Person als unterausgelastet.
     dev, hours_detail, rel_load = [], [], []
     cap_eff = effective_capacity(ctx)
     for e in countable_ids:
-        minutes = sum(ctx.shifts[s]["net"] for (emp, _), s in a.items() if emp == e)
+        gearbeitet = sum(ctx.shifts[s]["net"] for (emp, _), s in a.items() if emp == e)
+        gut = gutschrift.get(e, 0)
+        minutes = gearbeitet + gut
         soll = cap_eff[e]
         if soll > 0:
             dev.append(abs(minutes - soll) / soll)
             rel_load.append(minutes / soll)
-            hours_detail.append({"employee_id": e, "ist_min": minutes,
+            hours_detail.append({"employee_id": e, "ist_min": gearbeitet,
+                                 "gutschrift_min": gut,
                                  "soll_min": round(soll),
                                  "abweichung_min": round(minutes - soll),
                                  "abweichung_pct": round((minutes - soll) / soll * 100, 1)})
@@ -810,6 +908,7 @@ def evaluate(ctx: Context, result: PlanResult) -> dict:
         "hilfskraft_grenze": float(ctx.rules.get("rule_max_helper_share", 0.10)),
         "arbeitszeitabweichung": sum(dev) / len(dev) if dev else 0.0,
         "arbeitszeit_detail": hours_detail,
+        "krankheitsgutschrift_min": sum(gutschrift.values()),
         **load_stats,
         "planungszeit_s": result.runtime_s,
         "verfahren": result.method,
